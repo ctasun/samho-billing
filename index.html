@@ -62,6 +62,11 @@
       <div class="row">
         <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:200px">
         <select id="hMgr" style="max-width:140px"></select>
+        <span id="gubunFilter" style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
+          <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none">전체</button>
+          <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line)">기장</button>
+          <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line)">신대</button>
+        </span>
         <div style="max-width:110px"><label class="fld">연도</label><select id="gYear"></select></div>
         <button class="sm" id="lockBtn">🔒 잠김</button>
         <div style="flex:1"></div>
@@ -227,7 +232,7 @@ function pYear(p){return p.date?String(p.date).slice(0,4):(p.year||'');}
 function pSlot(p){return p.slot||(p.date?String(parseInt(String(p.date).slice(5,7),10)||''):'');}
 
 /* 수정 보호 암호 */
-let UNLOCKED=0;const HOLD=3*60*1000;
+let UNLOCKED=0;let GBF='';const HOLD=3*60*1000;
 const pw=()=>localStorage.getItem('samho_pw')||'';
 function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
@@ -271,14 +276,15 @@ function renderHome(){
   if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
   const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
-  const list=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf));
-  let h='<thead><tr><th class="c">#</th><th class="l">상호</th><th class="l">담당</th><th>월보수</th>'+SLOTS.map(s=>`<th class="colh" data-col="${s[0]}" title="열 전체 선택/해제">${s[1]}</th>`).join('')+'<th>누적보수</th></tr></thead><tbody>';
+  const list=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf)&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대')));
+  document.querySelectorAll('.gbf').forEach(b=>{b.className='gbf sm '+(b.dataset.gbf===GBF?'':'sec');if(b.dataset.gbf===GBF)b.style.background='var(--brand)',b.style.color='#fff';else b.style.background='',b.style.color='';b.onclick=()=>{GBF=b.dataset.gbf;renderHome();};});
+  let h='<thead><tr><th class="c">#</th><th class="c">구분</th><th class="l">상호</th><th class="l">담당</th><th>월보수</th>'+SLOTS.map(s=>`<th class="colh" data-col="${s[0]}" title="열 전체 선택/해제">${s[1]}</th>`).join('')+'<th>누적보수</th></tr></thead><tbody>';
   list.forEach(c=>{const ci=S.clients.indexOf(c);
     let cells='';SLOTS.forEach(s=>{const ps=slotPays(c,s[0],Y);
       if(!ps.length){cells+=`<td class="c"><span class="add" data-addci="${ci}" data-slot="${s[0]}">＋</span></td>`;}
       else{const allIss=ps.every(p=>p.issued);const sel=ps.some(p=>p._sel&&!p.issued);const d=fmtDate(ps[ps.length-1].date);const dd=d?d.slice(5).replace('-','/'):'●';const amt=ps.reduce((s2,p)=>s2+num(p.amount),0);
         cells+=`<td class="c ${allIss?'cell-ok':''}" title="${d} · ${F(amt)}원${allIss?' · 발행완료':''}"><label style="cursor:pointer"><input type="checkbox" class="pchk" data-ci="${ci}" data-slot="${s[0]}" ${sel?'checked':''} ${allIss?'disabled':''} style="width:auto;vertical-align:middle"> ${allIss?'✓':''}${dd}</label></td>`;}});
-    h+=`<tr><td class="c">${ci+1}</td><td class="l"><span data-gub="${ci}" style="cursor:pointer;font-weight:700;font-size:11px;color:${c.gubun==='신대'?'var(--warn)':'var(--brand2)'}" title="클릭: 기장↔신대 전환">[${c.gubun||'기장'}]</span> <span class="gbtag" data-gb="${ci}" title="클릭: 기장↔신대 전환" style="cursor:pointer;font-size:11px;font-weight:700;margin-right:3px;color:${c.gubun==='신대'?'#b35900':'#888'}">[${c.gubun==='신대'?'신대':'기장'}]</span><span class="lnk" data-open="${ci}">${c.name||'(무명)'}</span></td><td class="l">${c.manager||''}</td><td>${F(num(c.feeGross)||num(c.feeNet))}</td>${cells}<td>${F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s2,p)=>s2+num(p.amount),0))}</td></tr>`;});
+    h+=`<tr><td class="c">${ci+1}</td><td class="l"><span data-gub="${ci}" style="cursor:pointer;font-weight:700;font-size:11px;color:${c.gubun==='신대'?'var(--warn)':'var(--brand2)'}" title="클릭: 기장↔신대 전환">[${c.gubun||'기장'}]</span> <td class="c"><span class="gbtag" data-gb="${ci}" title="클릭: 기장↔신대 전환" style="cursor:pointer;font-size:11px;font-weight:700;color:${c.gubun==='신대'?'#b35900':'#888'}">[${c.gubun==='신대'?'신대':'기장'}]</span></td><td class="l"><span class="lnk" data-open="${ci}">${c.name||'(무명)'}</span></td><td class="l">${c.manager||''}</td><td>${F(num(c.feeGross)||num(c.feeNet))}</td>${cells}<td>${F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s2,p)=>s2+num(p.amount),0))}</td></tr>`;});
   document.getElementById('gridTable').innerHTML=h+'</tbody>';
   const gj=S.clients.filter(c=>c.gubun!=='신대');
   const B=gj.reduce((s,c)=>s+num(c.billed),0),C=gj.reduce((s,c)=>s+collectedOf(c),0);
