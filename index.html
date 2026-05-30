@@ -93,6 +93,7 @@
         <span class="muted">선택 <b id="selCnt">0</b>건 · 공급가액 <b id="selSupply">0</b> · 합계 <b id="selTotal">0</b></span>
         <div style="flex:1"></div>
         <button class="dl" id="issueBtn">🧾 세금계산서 발행</button>
+        <button id="cashIssueBtn">🧾 현금영수증 발행</button>
       </div>
       <div class="kpi" style="margin:10px 0">
         <div class="kbox"><div class="v" id="kClients">0</div><div class="l">거래처 수</div></div>
@@ -163,6 +164,13 @@
       <div class="fgrid" id="tplMap" style="margin-top:10px"></div>
       <div class="row" id="tplBtns" style="margin-top:10px;display:none"><button class="sm" id="saveTpl">이 형식으로 저장</button><button class="sec sm" id="clearTpl">양식 삭제</button></div>
     </details>
+    <div class="card">
+      <b style="color:var(--brand)">현금영수증 빈서식 등록 <span class="muted" id="cashTplStatus"></span></b>
+      <p class="muted" style="margin:6px 0">홈택스 현금영수증 일괄발급 빈서식(엑셀업로드양식 6열)을 한 번 등록하면, 발행 시 6개 시트를 그대로 보존한 채 7행부터 데이터만 채워 산출합니다. PC별 1회 등록.</p>
+      <div class="drop" id="dropCashTpl">현금영수증 빈서식 파일 선택 (.xltx/.xlsx/.xls)</div>
+      <input type="file" id="fileCashTpl" accept=".xltx,.xlsx,.xls" class="hidden">
+      <div class="row" id="cashTplBtns" style="margin-top:10px;display:none"><button class="sec sm" id="clearCashTpl">빈서식 삭제</button></div>
+    </div>
     <div class="card">
       <b style="color:var(--brand)">수정 보호 암호</b>
       <p class="muted" style="margin:6px 0">설정하면 수기 입력·추가는 잠금 해제(암호) 후에만, 삭제는 매번 암호를 요구합니다. 빈칸이면 보호 없음.</p>
@@ -406,6 +414,30 @@ function tplStatus(){document.getElementById('tplStatus').textContent=TPL?('· �
 bindDrop('dropTpl','fileTpl',function(f){readAoa(f,function(aoa){document.getElementById('dropTpl').classList.add('has');renderTplMap(aoa,null);});});
 document.getElementById('saveTpl').onclick=function(){if(!tplAoa)return;var map=[];document.querySelectorAll('#tplMap select').forEach(function(s){map[+s.dataset.i]=s.value;});var cols=Math.max.apply(null,tplAoa.map(function(r){return (r||[]).length;}));TPL={top:tplAoa.slice(0,tplHeaderRow+1),cols:cols,map:map,headerRow:tplHeaderRow};localStorage.setItem('samho_tpl',JSON.stringify(TPL));tplStatus();alert('발행 양식 저장됨 (머리글 '+(tplHeaderRow+1)+'행 보존, '+cols+'열)');};
 document.getElementById('clearTpl').onclick=function(){TPL=null;localStorage.removeItem('samho_tpl');document.getElementById('tplMap').innerHTML='';document.getElementById('tplBtns').style.display='none';tplStatus();};
+
+/* 현금영수증 빈서식 등록 */
+function cashTplStatus(){var has=!!localStorage.getItem('samho_cash_blank_b64');document.getElementById('cashTplStatus').textContent=has?'· 등록됨':'· 미등록';document.getElementById('cashTplBtns').style.display=has?'flex':'none';}
+function readB64(file,cb){var fr=new FileReader();fr.onload=function(e){cb(String(e.target.result).split(',')[1]);};fr.readAsDataURL(file);}
+bindDrop('dropCashTpl','fileCashTpl',function(f){readB64(f,function(b64){try{XLSX.read(Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);}),{type:'array'});}catch(e){alert('엑셀 빈서식이 아닙니다: '+e.message);return;}localStorage.setItem('samho_cash_blank_b64',b64);document.getElementById('dropCashTpl').classList.add('has');cashTplStatus();alert('현금영수증 빈서식이 등록되었습니다.');});});
+document.getElementById('clearCashTpl').onclick=function(){if(!confirm('등록된 현금영수증 빈서식을 삭제할까요?'))return;localStorage.removeItem('samho_cash_blank_b64');document.getElementById('dropCashTpl').classList.remove('has');cashTplStatus();};
+cashTplStatus();
+
+/* 현금영수증 발행 */
+document.getElementById('cashIssueBtn').onclick=async()=>{const sel=selectedPays();if(!sel.length){alert('월 칸 또는 열을 선택하세요.');return;}
+  const b64=localStorage.getItem('samho_cash_blank_b64');if(!b64){alert('④설정에서 현금영수증 빈서식을 먼저 등록하세요.');return;}
+  if(sel.some(r=>!r.c.bizno&&r.c.ssn)&&!CRYPTOKEY){alert('비사업자 주민번호 복호화를 위해 ④설정에서 공용 암호키를 입력하세요.');return;}
+  if(sel.some(r=>!r.c.bizno&&!r.c.ssn)){alert('사업자번호·주민번호가 모두 없는 거래처가 있어 발급수단번호를 만들 수 없습니다. 거래처 정보를 확인 후 다시 시도하세요.');return;}
+  let wb;try{wb=XLSX.read(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),{type:'array',cellFormula:true});}catch(e){alert('빈서식 읽기 실패: '+e.message);return;}
+  const ws=wb.Sheets['엑셀업로드양식'];if(!ws){alert('빈서식에 "엑셀업로드양식" 시트가 없습니다. 올바른 홈택스 빈서식을 등록하세요.');return;}
+  if(!confirm(sel.length+'건을 현금영수증으로 발행할까요? (발행분은 ✓로 잠깁니다)'))return;
+  const today=new Date().toISOString().slice(0,10);const changed=[];const rows=[];
+  for(const r of sel){const total=Math.round(num(r.p.amount));const tax=Math.floor(total*10/110);const supply=total-tax;
+    let id19=r.c.bizno?String(r.c.bizno):await decSsn(r.c.ssn);id19=String(id19).replace(/[^0-9\-]/g,'');
+    rows.push([r.c.bizno?'1':'0',id19,String(total),String(supply),String(tax),'']);
+    r.p.issued=true;r.p.issueDate=today;r.p.supply=supply;r.p.tax=tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
+  XLSX.utils.sheet_add_aoa(ws,rows,{origin:'A7'});
+  XLSX.writeFile(wb,'세무법인삼호 남부지점 현금영수증 발행_'+today.replace(/-/g,'')+'.xlsx');
+  Store.save();renderHome();if(CONNECTED()){for(const c of changed)await pushClient(c);chip('☁ 발행상태 동기화');}};
 
 /* 실적 */
 function renderPerf(){fillSel('perfView',['all'].concat(uniq(S.history.map(h=>h.manager).filter(Boolean))),v=>v==='all'?'전체 담당자':v);fillSel('perfMonth',[''].concat(uniq(S.history.map(h=>h.month)).sort().reverse()),v=>v||'전체 기간');const mgr=document.getElementById('perfView').value,mon=document.getElementById('perfMonth').value;const data=S.history.filter(h=>(mgr==='all'||h.manager===mgr)&&(!mon||h.month===mon));const agg={};data.forEach(h=>{const k=h.manager||'(미지정)';agg[k]=agg[k]||{b:0,c:0,n:0};agg[k].b+=num(h.billed);agg[k].c+=num(h.collected);agg[k].n++;});const max=Math.max(1,...Object.values(agg).map(a=>a.b||a.c));let h1='<thead><tr><th class="l">담당자</th><th>건수</th><th>매출(청구)</th><th>수금</th><th>수금률</th><th class="l">비중</th></tr></thead><tbody>';Object.entries(agg).sort((a,b)=>(b[1].b+b[1].c)-(a[1].b+a[1].c)).forEach(([k,v])=>h1+=`<tr><td class="l">${k}</td><td>${v.n}</td><td>${F(v.b)}</td><td>${F(v.c)}</td><td>${v.b?Math.round(v.c/v.b*100):0}%</td><td class="l"><div class="bar"><i style="width:${(v.b||v.c)/max*100}%"></i></div></td></tr>`);document.getElementById('perfTable').innerHTML=h1+'</tbody>';let h2='<thead><tr><th class="l">월</th><th class="l">업체</th><th class="l">담당자</th><th>매출</th><th>수금</th></tr></thead><tbody>';data.slice().reverse().forEach(h=>h2+=`<tr><td class="l">${h.month}</td><td class="l">${h.company}</td><td class="l">${h.manager}</td><td>${num(h.billed)?F(h.billed):''}</td><td>${num(h.collected)?F(h.collected):''}</td></tr>`);document.getElementById('perfDetail').innerHTML=h2+'</tbody>';}
