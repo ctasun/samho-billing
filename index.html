@@ -228,7 +228,6 @@ const KEY='samho_tool_v6'; let mem=null;
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
 function def(){return {clients:[],history:[],managers:['김선영','최수미','김다솜'],meta:{}};}
 let S=Store.get();if(!S.meta)S.meta={};S.clients.forEach(c=>{if(!c.id)c.id=newId();});
-let S=Store.get();S.clients.forEach(c=>{if(!c.id)c.id=newId();});
 function chip(t){document.getElementById('syncState').textContent=t;}
 const F=n=>(isNaN(n)||n===''||n==null)?'0':Math.round(n).toLocaleString('ko-KR');
 const num=v=>{if(v==null)return 0;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;};
