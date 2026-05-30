@@ -230,9 +230,10 @@ const MF=[['name','상호'],['ceo','대표자'],['bizno','사업자등록번호(
 const SLOTS=[['1','1월'],['2','2월'],['3','3월'],['4','4월'],['5','5월'],['6','6월'],['7','7월'],['8','8월'],['9','9월'],['10','10월'],['11','11월'],['12','12월'],['확정신고','확정신고'],['기타','기타']];
 function pYear(p){return p.date?String(p.date).slice(0,4):(p.year||'');}
 function pSlot(p){return p.slot||(p.date?String(parseInt(String(p.date).slice(5,7),10)||''):'');}
+function misuMonths(c,Y){const now=new Date();const curY=now.getFullYear();const curM=now.getMonth()+1;const yNum=parseInt(Y,10);const upto=(yNum<curY)?12:(yNum>curY?0:curM);if(upto<1)return 0;let due;if(c.gubun==='신대'&&Array.isArray(c.payMonths)&&c.payMonths.length){due=c.payMonths.filter(m=>m>=1&&m<=upto);}else{due=[];for(let m=1;m<=upto;m++)due.push(m);}let miss=0;due.forEach(m=>{const has=(c.payments||[]).some(p=>pYear(p)===String(Y)&&parseInt(pSlot(p),10)===m);if(!has)miss++;});return miss;}
 
 /* 수정 보호 암호 */
-let UNLOCKED=0;let GBF='';const HOLD=3*60*1000;
+let UNLOCKED=0;let GBF='';let GBF='';let GBF='';let MISU='';const HOLD=3*60*1000;
 const pw=()=>localStorage.getItem('samho_pw')||'';
 function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
@@ -277,6 +278,7 @@ function renderHome(){
   document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
   const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
   const list=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf)&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대')));
+  document.querySelectorAll('.gbf').forEach(b=>{b.className='gbf sm '+(b.dataset.gbf===GBF?'':'sec');if(b.dataset.gbf===GBF)b.style.background='var(--brand)',b.style.color='#fff';else b.style.background='',b.style.color='';b.onclick=()=>{GBF=b.dataset.gbf;renderHome();};});&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대')));
   document.querySelectorAll('.gbf').forEach(b=>{b.className='gbf sm '+(b.dataset.gbf===GBF?'':'sec');if(b.dataset.gbf===GBF)b.style.background='var(--brand)',b.style.color='#fff';else b.style.background='',b.style.color='';b.onclick=()=>{GBF=b.dataset.gbf;renderHome();};});
   let h='<thead><tr><th class="c">#</th><th class="c">구분</th><th class="l">상호</th><th class="l">담당</th><th>월보수</th>'+SLOTS.map(s=>`<th class="colh" data-col="${s[0]}" title="열 전체 선택/해제">${s[1]}</th>`).join('')+'<th>누적보수</th></tr></thead><tbody>';
   list.forEach(c=>{const ci=S.clients.indexOf(c);
@@ -292,7 +294,7 @@ function renderHome(){
   document.querySelectorAll('#gridTable [data-open]').forEach(s=>s.onclick=()=>openClient(+s.dataset.open));
   document.querySelectorAll('.pchk').forEach(x=>x.onchange=e=>{slotPays(S.clients[e.target.dataset.ci],e.target.dataset.slot,Y).filter(p=>!p.issued).forEach(p=>p._sel=e.target.checked);updateSel();});
   document.querySelectorAll('.colh').forEach(th=>th.onclick=()=>{const col=th.dataset.col;const all=[];list.forEach(c=>slotPays(c,col,Y).filter(p=>!p.issued).forEach(p=>all.push(p)));const target=!all.every(p=>p._sel);all.forEach(p=>p._sel=target);renderHome();});
-  document.querySelectorAll('.gbtag').forEach(g=>g.onclick=e=>{e.stopPropagation();if(!requireWrite())return;const c=S.clients[+g.dataset.gb];c.gubun=(c.gubun==='신대')?'기장':'신대';Store.save();renderHome();pushClient(c);});
+  document.querySelectorAll('.gbtag').forEach(g=>g.onclick=e=>{e.stopPropagation();if(!requireWrite())return;const c=S.clients[+g.dataset.gb];if(c.gubun!=='신대'){c.gubun='신대';const inp=prompt('신대 수금월을 쉼표로 입력 (예: 1,5,7) — 비우면 매달로 처리','1,5,7');if(inp!==null){const ms=inp.split(',').map(x=>parseInt(x.trim(),10)).filter(m=>m>=1&&m<=12);c.payMonths=ms;}}else{c.gubun='기장';c.payMonths=[];}Store.save();renderHome();pushClient(c);});
   document.querySelectorAll('.add').forEach(a=>a.onclick=()=>addPayCell(+a.dataset.addci,a.dataset.slot));
   updateSel();
 }
