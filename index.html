@@ -226,7 +226,8 @@
 <script>
 const KEY='samho_tool_v6'; let mem=null;
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
-function def(){return {clients:[],history:[],managers:['김선영','김다솜']};}
+function def(){return {clients:[],history:[],managers:['김선영','최수미','김다솜'],meta:{}};}
+let S=Store.get();if(!S.meta)S.meta={};S.clients.forEach(c=>{if(!c.id)c.id=newId();});
 let S=Store.get();S.clients.forEach(c=>{if(!c.id)c.id=newId();});
 function chip(t){document.getElementById('syncState').textContent=t;}
 const F=n=>(isNaN(n)||n===''||n==null)?'0':Math.round(n).toLocaleString('ko-KR');
@@ -270,7 +271,10 @@ function clean(c){const x=Object.assign({},c);delete x._sel;(x.payments||[]).for
 async function pushClient(c){if(!CONNECTED())return;try{c.collected=collectedOf(c);await api({action:'saveClient',client:clean(c)});chip('☁ 동기화됨');}catch(e){chip('⚠ 동기화 실패');}}
 async function pushDelete(id){if(!CONNECTED())return;try{await api({action:'deleteClient',id});}catch(e){}}
 async function pushHistory(rows){if(!CONNECTED()||!rows.length)return;try{await api({action:'addHistory',rows});}catch(e){}}
-async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r&&r.clients){S.clients=r.clients.map(c=>{['billed','collected','feeNet','feeGross','lastPayAmount'].forEach(k=>c[k]=num(c[k]));['payments','appliedPays','appliedBills'].forEach(k=>{if(typeof c[k]==='string'){try{c[k]=JSON.parse(c[k]||'[]');}catch(_){c[k]=[];}}if(!Array.isArray(c[k]))c[k]=[];});return c;});S.history=(r.history||[]).map(h=>({month:h.month,company:h.company,manager:h.manager,billed:num(h.billed),collected:num(h.collected)}));Store.save();chip('☁ 연동됨 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));}}
+async function pushMeta(){if(!CONNECTED())return;try{await api({action:'saveMeta',meta:S.meta||{}});}catch(e){}}
+function nowStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function renderMeta(){const m=S.meta||{};const b=document.getElementById('bankApplyInfo');if(b)b.textContent=m.bankApplyAt?('마지막 통장 반영: '+m.bankApplyAt):'';const d=document.getElementById('deoApplyInfo');if(d)d.textContent=m.deobilApplyAt?('마지막 더빌 반영: '+m.deobilApplyAt):'';const e=document.getElementById('manualInfo');if(e)e.textContent=m.manualAt?('🕐 최근 수기 입력: '+m.manualAt+(m.manualWho?(' · '+m.manualWho):'')):'';}
+async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r&&r.clients){S.clients=r.clients.map(c=>{['billed','collected','feeNet','feeGross','lastPayAmount'].forEach(k=>c[k]=num(c[k]));['payments','appliedPays','appliedBills'].forEach(k=>{if(typeof c[k]==='string'){try{c[k]=JSON.parse(c[k]||'[]');}catch(_){c[k]=[];}}if(!Array.isArray(c[k]))c[k]=[];});return c;});S.history=(r.history||[]).map(h=>({month:h.month,company:h.company,manager:h.manager,billed:num(h.billed),collected:num(h.collected)}));S.meta=r.meta||S.meta||{};Store.save();renderMeta();chip('☁ 연동됨 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));}}
 
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');});
 document.getElementById('refreshBtn').onclick=async()=>{if(CONNECTED()){chip('불러오는 중...');await cloudLoad();renderHome();}};
