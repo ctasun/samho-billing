@@ -1,0 +1,402 @@
+<!-- 세무법인삼호 남부지점 통합 관리 v6 : 월별 수금대장 그리드 + 그리드 발행 + 수정암호 + 거래처선등록 + 구글시트연동 + 주민번호암호화 -->
+<div id="app">
+<style>
+  :root{--card:#fff;--ink:#1a1a1a;--sub:#666;--line:#e3e6ea;--brand:#1f4e79;--brand2:#2e6da4;--ok:#1a7f37;--warn:#b35900;--bad:#b00020;--chip:#eef2f7;}
+  *{box-sizing:border-box;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;}
+  #app{color:var(--ink);font-size:13px;line-height:1.5;}
+  .wrap{max-width:1320px;margin:0 auto;padding:14px;}
+  h1{font-size:17px;margin:0 0 2px;color:var(--brand);}
+  .muted{color:var(--sub);font-size:12px;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;}
+  .tab{padding:8px 14px;border:1px solid var(--line);background:var(--card);border-radius:8px 8px 0 0;cursor:pointer;font-weight:600;color:var(--sub);}
+  .tab.active{color:var(--brand);border-bottom:2px solid var(--brand);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  label.fld{display:block;font-size:11px;color:var(--sub);margin:0 0 3px;}
+  input,select,textarea{padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px;width:100%;}
+  button{padding:8px 14px;border:none;border-radius:7px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;font-size:13px;}
+  button.sec{background:#eef2f7;color:var(--brand);border:1px solid var(--line);}
+  button.gho{background:transparent;color:var(--brand);border:1px solid var(--brand);}
+  button.dl{background:var(--ok);} button.sm{padding:4px 9px;font-size:12px;} button.x{background:#fbe9eb;color:var(--bad);padding:4px 9px;}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:#fafbfc;font-size:12px;}
+  .drop.has{border-color:var(--ok);background:#f1f8f3;}
+  table{border-collapse:collapse;width:100%;font-size:12px;}
+  th,td{border:1px solid var(--line);padding:4px 6px;text-align:right;white-space:nowrap;}
+  th{background:#f0f3f7;color:var(--brand);position:sticky;top:0;z-index:1;}
+  td.l,th.l{text-align:left;} td.c,th.c{text-align:center;}
+  .scroll{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;}
+  .kbox{flex:1;min-width:120px;background:linear-gradient(135deg,#1f4e79,#2e6da4);color:#fff;border-radius:10px;padding:11px;}
+  .kbox .v{font-size:19px;font-weight:800;} .kbox .l{font-size:11px;opacity:.85;}
+  .bar{height:9px;background:#e3e6ea;border-radius:6px;overflow:hidden;}.bar>i{display:block;height:100%;background:var(--brand2);}
+  .note{font-size:11px;color:var(--sub);background:#fff8ec;border:1px solid #f0e1c0;padding:8px 10px;border-radius:8px;}
+  .pill{background:var(--chip);padding:3px 8px;border-radius:7px;font-size:12px;}
+  .lnk{color:var(--brand2);font-weight:700;cursor:pointer;text-decoration:underline;}
+  .hidden{display:none;}
+  .cell-ok{background:#eaf6ec;} .colh{cursor:pointer;} .colh:hover{background:#e3ecf5;}
+  .add{color:#bbb;cursor:pointer;font-weight:700;}
+  #overlay{position:fixed;inset:0;background:rgba(20,30,45,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
+  #modal{background:#fff;border-radius:12px;max-width:780px;width:100%;max-height:92vh;overflow:auto;padding:18px;}
+  #modal h2{margin:0;font-size:16px;color:var(--brand);}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  @media(max-width:680px){.fgrid{grid-template-columns:1fr;}}
+  .lockon{background:#fbe9eb;color:var(--bad);} .lockoff{background:#e6f4ea;color:var(--ok);}
+</style>
+
+<div class="wrap">
+  <div class="row" style="justify-content:space-between">
+    <div><h1>세무법인삼호 남부지점 — 수금대장·발행</h1>
+    <div class="muted">월별 수금대장 · 그리드 발행 · 주민번호 암호화 <span id="syncState" class="pill">로컬 모드</span></div></div>
+    <button class="sec sm" id="refreshBtn">⟳ 새로고침</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-t="home">① 수금관리</div>
+    <div class="tab" data-t="upload">② 입금 업로드</div>
+    <div class="tab" data-t="perf">③ 담당자별 실적</div>
+    <div class="tab" data-t="set">④ 설정·연동</div>
+  </div>
+
+  <!-- 수금관리 그리드 -->
+  <div id="home" class="tabpane">
+    <div class="card">
+      <div class="row">
+        <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:200px">
+        <select id="hMgr" style="max-width:140px"></select>
+        <div style="max-width:110px"><label class="fld">연도</label><select id="gYear"></select></div>
+        <button class="sm" id="lockBtn">🔒 잠김</button>
+        <div style="flex:1"></div>
+        <button id="newClient">＋ 수임</button>
+        <button class="sec sm" id="impBtn">⬆ 명단</button>
+        <input type="file" id="impFile" accept=".xls,.xlsx" class="hidden">
+        <button class="dl sm" id="expClients">⬇ 내보내기</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div style="max-width:160px"><label class="fld">작성일자(발행일)</label><input type="date" id="gIssueDate"></div>
+        <span class="muted">선택 <b id="selCnt">0</b>건 · 공급가액 <b id="selSupply">0</b> · 합계 <b id="selTotal">0</b></span>
+        <div style="flex:1"></div>
+        <button class="dl" id="issueBtn">🧾 세금계산서 발행</button>
+      </div>
+      <div class="kpi" style="margin:10px 0">
+        <div class="kbox"><div class="v" id="kClients">0</div><div class="l">거래처 수</div></div>
+        <div class="kbox"><div class="v" id="kBilled">0</div><div class="l">누적 청구</div></div>
+        <div class="kbox"><div class="v" id="kCollected">0</div><div class="l">누적 수금</div></div>
+        <div class="kbox" style="background:linear-gradient(135deg,#b35900,#d97706)"><div class="v" id="kBalance">0</div><div class="l">미수 잔액</div></div>
+        <div class="kbox" style="background:linear-gradient(135deg,#1a7f37,#34a853)"><div class="v" id="kRate">0%</div><div class="l">수금률</div></div>
+      </div>
+      <div class="scroll"><table id="gridTable"></table></div>
+      <div class="note" id="tplWarn" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- 입금 업로드 -->
+  <div id="upload" class="tabpane hidden">
+    <div class="card">
+      <b style="color:var(--brand)">통장·더빌 업로드 → 입금/청구 반영</b>
+      <p class="muted" style="margin:6px 0">먼저 ①에서 거래처가 등록돼 있어야 반영됩니다. 미등록 입금자는 자동 추가되지 않고 아래 목록에만 표시됩니다(거래처 중복 방지).</p>
+      <div class="fgrid">
+        <div>
+          <label class="fld">🏦 회사통장 (입금일·입금액)</label>
+          <div class="drop" id="dropBank">통장 파일 선택<div class="muted" id="infoBank"></div></div>
+          <input type="file" id="fileBank" accept=".xls,.xlsx" class="hidden">
+          <div class="row hidden" id="bankSel" style="margin-top:8px">
+            <div style="flex:1"><label class="fld">입금자</label><select id="mPayer"></select></div>
+            <div style="flex:1"><label class="fld">입금액</label><select id="mAmount"></select></div>
+            <div style="flex:1"><label class="fld">입금일</label><select id="mDate"></select></div>
+            <div style="align-self:flex-end"><button class="sm" id="applyBank">수금 반영</button></div>
+          </div>
+          <div class="muted" id="bankResult" style="margin-top:6px"></div>
+        </div>
+        <div>
+          <label class="fld">📄 더빌 (청구액) — 선택</label>
+          <div class="drop" id="dropDeobil">더빌 파일 선택<div class="muted" id="infoDeobil"></div></div>
+          <input type="file" id="fileDeobil" accept=".xls,.xlsx" class="hidden">
+          <div class="row hidden" id="deoSel" style="margin-top:8px">
+            <div style="flex:1"><label class="fld">거래처</label><select id="dName"></select></div>
+            <div style="flex:1"><label class="fld">청구액</label><select id="dAmount"></select></div>
+            <div style="align-self:flex-end"><button class="sm sec" id="applyDeobil">청구 반영</button></div>
+          </div>
+          <div class="muted" id="deoResult" style="margin-top:6px"></div>
+        </div>
+      </div>
+      <div id="unmatchBox" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- 실적 -->
+  <div id="perf" class="tabpane hidden">
+    <div class="card"><div class="row">
+      <select id="perfView" style="max-width:200px"></select>
+      <select id="perfMonth" style="max-width:160px"></select>
+      <div style="flex:1"></div><span class="muted">본인 실적은 본인 이름 선택</span>
+    </div></div>
+    <div class="card"><b style="color:var(--brand)">담당자별 매출(청구)·수금</b><div class="scroll" style="margin-top:10px"><table id="perfTable"></table></div></div>
+    <div class="card"><b style="color:var(--brand)">상세 내역</b><div class="scroll" style="margin-top:10px;max-height:340px"><table id="perfDetail"></table></div></div>
+  </div>
+
+  <!-- 설정 -->
+  <div id="set" class="tabpane hidden">
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:700;color:var(--brand)">발행 양식 등록 <span class="muted" id="tplStatus"></span></summary>
+      <p class="muted" style="margin:8px 0">프로그램 업로드용 세금계산서 파일을 한 번 올리면 그 열 순서대로 출력하도록 매핑합니다.</p>
+      <div class="drop" id="dropTpl">발행 양식 파일 선택 (.xls/.xlsx)</div>
+      <input type="file" id="fileTpl" accept=".xls,.xlsx" class="hidden">
+      <div class="fgrid" id="tplMap" style="margin-top:10px"></div>
+      <div class="row" id="tplBtns" style="margin-top:10px;display:none"><button class="sm" id="saveTpl">이 형식으로 저장</button><button class="sec sm" id="clearTpl">양식 삭제</button></div>
+    </details>
+    <div class="card">
+      <b style="color:var(--brand)">수정 보호 암호</b>
+      <p class="muted" style="margin:6px 0">설정하면 수기 입력·추가는 잠금 해제(암호) 후에만, 삭제는 매번 암호를 요구합니다. 빈칸이면 보호 없음.</p>
+      <div class="row"><div style="max-width:240px"><input id="cfgPw" type="password" placeholder="수정 암호"></div><button class="sec sm" id="savePw">암호 저장</button><span class="muted" id="pwMsg"></span></div>
+    </div>
+    <div class="card">
+      <b style="color:var(--brand)">구글시트 실시간 연동</b>
+      <ol class="muted" style="margin:6px 0 10px 18px;padding:0">
+        <li>구글 스프레드시트 → <b>확장 프로그램 ▸ Apps Script</b></li>
+        <li>아래 코드 붙여넣기·저장 → <b>배포 ▸ 새 배포 ▸ 웹 앱</b>, 액세스 <b>모든 사용자</b></li>
+        <li>URL·공용 암호키 입력 (키는 시트에 저장 안 됨)</li>
+      </ol>
+      <label class="fld">▼ Apps Script 코드</label>
+      <textarea id="gasCode" rows="6" readonly style="font-family:monospace;font-size:11px"></textarea>
+      <div style="margin:6px 0 12px"><button class="sec sm" id="copyGas">📋 코드 복사</button></div>
+      <div class="fgrid">
+        <div><label class="fld">웹 앱 URL</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/..../exec"></div>
+        <div><label class="fld">공용 암호키 (주민번호 암호화)</label><input id="cfgKey" type="password" placeholder="사무실 공용 비밀키"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="saveCfg">연동 저장</button><button class="sec" id="testConn">연결 테스트</button>
+        <button class="sec" id="cloudPull">⬇ 불러오기</button><button class="gho" id="cloudPushAll">⬆ 전체 올리기</button>
+        <span id="connMsg" class="muted"></span>
+      </div>
+    </div>
+    <div class="card"><b style="color:var(--brand)">백업 / 담당자</b>
+      <div class="row" style="margin-top:8px">
+        <button class="sec sm" id="backupExport">⬇ 로컬 백업</button>
+        <button class="gho sm" id="backupImportBtn">⬆ 복원</button>
+        <input type="file" id="backupImport" accept=".json" class="hidden">
+        <button class="x sm" id="resetAll">로컬 초기화</button>
+      </div>
+      <label class="fld" style="margin-top:10px">담당자 목록 (쉼표 구분)</label>
+      <textarea id="mgrList" rows="2"></textarea>
+      <div style="margin-top:8px"><button class="sec sm" id="saveMgr">담당자 저장</button></div>
+    </div>
+    <div class="card"><div class="note">⚠ 주민번호는 암호문으로만 저장(개인정보 보호법 제24조의2②). 공용 암호키 분실 시 복호화 불가. 실제 데이터는 깃허브에 올리지 마세요.</div></div>
+  </div>
+</div>
+
+<div id="overlay"><div id="modal">
+  <div class="row" style="justify-content:space-between"><h2 id="mTitle">거래처 상세</h2><button class="sec sm" id="mClose">닫기 ✕</button></div>
+  <div class="fgrid" id="mFields"></div>
+  <div class="card" style="margin-top:12px;background:#f7f9fc">
+    <div class="row" style="justify-content:space-between"><b style="color:var(--brand)">수금 현황</b><button class="sec sm" id="mAddPay">＋ 입금 추가</button></div>
+    <div class="fgrid">
+      <div><label class="fld">청구 누계</label><input id="mBilled" type="number"></div>
+      <div><label class="fld">수금 누계(자동)</label><input id="mCollected" disabled></div>
+      <div><label class="fld">미수 잔액</label><input id="mBalance" disabled></div>
+      <div><label class="fld">최근 입금</label><input id="mLastPay" disabled></div>
+    </div>
+    <div class="scroll" style="max-height:160px;margin-top:8px"><table id="mPayTable"></table></div>
+  </div>
+  <div class="row" style="margin-top:12px;justify-content:space-between">
+    <button class="x" id="mDelete">거래처 삭제</button>
+    <div><button class="sec sm" id="mCancel">취소</button> <button id="mSave">저장</button></div>
+  </div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const KEY='samho_tool_v6'; let mem=null;
+const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
+function def(){return {clients:[],history:[],managers:['김선영','김다솜']};}
+let S=Store.get();S.clients.forEach(c=>{if(!c.id)c.id=newId();});
+function chip(t){document.getElementById('syncState').textContent=t;}
+const F=n=>(isNaN(n)||n===''||n==null)?'0':Math.round(n).toLocaleString('ko-KR');
+const num=v=>{if(v==null)return 0;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;};
+function norm(s){if(!s)return'';return String(s).replace(/\(주\)|\(유\)|㈜|주식회사|유한회사|유한책임회사|합자회사|합명회사|\(사\)|\(재\)/g,'').replace(/[\s\u00A0]/g,'').replace(/[()㈜.\-_,·]/g,'').toLowerCase();}
+function fmtDate(d){if(!d)return'';if(typeof d==='number'){const o=XLSX.SSF?XLSX.SSF.parse_date_code(d):null;if(o)return o.y+'-'+String(o.m).padStart(2,'0')+'-'+String(o.d).padStart(2,'0');}return String(d).trim();}
+function uniq(a){return[...new Set(a)];}
+function newId(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+const collectedOf=c=>(c.payments||[]).reduce((s,p)=>s+num(p.amount),0);
+const bal=c=>num(c.billed)-collectedOf(c);
+function findClient(name){const n=norm(name);if(!n)return null;return S.clients.find(c=>norm(c.name)===n)||S.clients.find(c=>{const cn=norm(c.name);return cn&&(cn.includes(n)||n.includes(cn));});}
+function dupClient(name,bizno,exceptId){const bn=String(bizno||'').replace(/\D/g,'');return S.clients.find(c=>c.id!==exceptId&&((bn&&String(c.bizno||'').replace(/\D/g,'')===bn)||(name&&norm(c.name)===norm(name))));}
+function supplyOf(c,p){return p.supply!=null?num(p.supply):(num(c.feeNet)||Math.round(num(p.amount)/1.1));}
+function taxOf(c,p){if(p.tax!=null)return num(p.tax);const s=supplyOf(c,p);return (p.supply==null&&num(c.feeGross))?(num(c.feeGross)-num(c.feeNet)):Math.round(s*0.1);}
+const MF=[['name','상호'],['ceo','대표자'],['bizno','사업자등록번호(법인등록번호)'],['ssn','대표자주민번호'],['tel','연락처'],['openDate','개업일'],['contractDate','계약일'],['email','이메일주소'],['bizType','업태'],['bizItem','종목'],['feeNet','월정기보수(VAT제외)'],['feeGross','월정기보수'],['addr','사업장 주소'],['calAddr','달력 발송 주소'],['wht','원천'],['note','비고'],['manager','담당자']];
+const SLOTS=[['1','1월'],['2','2월'],['3','3월'],['4','4월'],['5','5월'],['6','6월'],['7','7월'],['8','8월'],['9','9월'],['10','10월'],['11','11월'],['12','12월'],['확정신고','확정신고'],['기타','기타']];
+function pYear(p){return p.date?String(p.date).slice(0,4):(p.year||'');}
+function pSlot(p){return p.slot||(p.date?String(parseInt(String(p.date).slice(5,7),10)||''):'');}
+
+/* 수정 보호 암호 */
+let UNLOCKED=0;const HOLD=3*60*1000;
+const pw=()=>localStorage.getItem('samho_pw')||'';
+function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
+function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
+function reflectLock(){const b=document.getElementById('lockBtn');if(!pw()){b.textContent='🔓 보호 없음';b.className='sm sec';}else if(Date.now()<UNLOCKED){const s=Math.max(0,Math.round((UNLOCKED-Date.now())/1000));b.textContent='🔓 해제중 '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' (눌러 잠금)';b.className='sm lockoff';}else{b.textContent='🔒 수정 시 암호';b.className='sm lockon';}}
+
+/* 암호화 */
+let CRYPTOKEY=null;
+const b64=u=>btoa(String.fromCharCode.apply(null,u));const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function setupKey(p){const e=new TextEncoder();const base=await crypto.subtle.importKey('raw',e.encode(p),'PBKDF2',false,['deriveKey']);CRYPTOKEY=await crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('samho-ssn-2026'),iterations:100000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function encSsn(t){if(!t)return'';if(!CRYPTOKEY)throw new Error('nokey');const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},CRYPTOKEY,new TextEncoder().encode(t));return 'enc1:'+b64(iv)+':'+b64(new Uint8Array(ct));}
+async function decSsn(blob){if(!blob)return'';if(!String(blob).startsWith('enc1:'))return blob;if(!CRYPTOKEY)return'🔒(키필요)';try{const p=String(blob).split(':');const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(p[1])},CRYPTOKEY,ub64(p[2]));return new TextDecoder().decode(pt);}catch(e){return'🔑(키오류)';}}
+
+/* 연동 */
+const cfgUrl=()=>(localStorage.getItem('samho_url')||'').trim();
+const CONNECTED=()=>!!cfgUrl();
+async function api(payload){await fetch(cfgUrl(),{method:'POST',body:JSON.stringify(payload),mode:'no-cors'});return {ok:true};}
+function jsonpLoad(){return new Promise(function(res,rej){var cb='__scb'+Date.now();var s=document.createElement('script');window[cb]=function(d){res(d);try{delete window[cb];}catch(e){}s.remove();};s.onerror=function(){rej(new Error('fail'));try{delete window[cb];}catch(e){}s.remove();};s.src=cfgUrl()+'?action=load&callback='+cb+'&t='+Date.now();document.head.appendChild(s);setTimeout(function(){if(window[cb]){rej(new Error('timeout'));try{delete window[cb];}catch(e){}s.remove();}},15000);});}
+function clean(c){const x=Object.assign({},c);delete x._sel;(x.payments||[]).forEach&&(x.payments=(x.payments||[]).map(p=>{const q=Object.assign({},p);delete q._sel;return q;}));return x;}
+async function pushClient(c){if(!CONNECTED())return;try{c.collected=collectedOf(c);await api({action:'saveClient',client:clean(c)});chip('☁ 동기화됨');}catch(e){chip('⚠ 동기화 실패');}}
+async function pushDelete(id){if(!CONNECTED())return;try{await api({action:'deleteClient',id});}catch(e){}}
+async function pushHistory(rows){if(!CONNECTED()||!rows.length)return;try{await api({action:'addHistory',rows});}catch(e){}}
+async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r&&r.clients){S.clients=r.clients.map(c=>{['billed','collected','feeNet','feeGross','lastPayAmount'].forEach(k=>c[k]=num(c[k]));['payments','appliedPays','appliedBills'].forEach(k=>{if(typeof c[k]==='string'){try{c[k]=JSON.parse(c[k]||'[]');}catch(_){c[k]=[];}}if(!Array.isArray(c[k]))c[k]=[];});return c;});S.history=(r.history||[]).map(h=>({month:h.month,company:h.company,manager:h.manager,billed:num(h.billed),collected:num(h.collected)}));Store.save();chip('☁ 연동됨 '+new Date().toLocaleTimeString('ko-KR').slice(0,5));}}
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');});
+document.getElementById('refreshBtn').onclick=async()=>{if(CONNECTED()){chip('불러오는 중...');await cloudLoad();renderHome();}};
+
+function readXlsx(file,cb){const fr=new FileReader();fr.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const hi=aoa.findIndex(r=>r.filter(c=>String(c).trim()!=='').length>=2);const headers=(aoa[hi]||[]).map((h,i)=>String(h).trim()||('열'+(i+1)));const rows=aoa.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]);return o;});cb({headers,rows,name:file.name});}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
+function bindDrop(d,i,cb){const D=document.getElementById(d),I=document.getElementById(i);D.onclick=()=>I.click();D.ondragover=e=>e.preventDefault();D.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])cb(e.dataTransfer.files[0]);};I.onchange=e=>{if(e.target.files[0])cb(e.target.files[0]);};}
+function fillSel(id,arr,fn){const el=document.getElementById(id),cur=el.value;el.innerHTML=arr.map(v=>`<option value="${v}">${fn?fn(v):v}</option>`).join('');if(arr.includes(cur))el.value=cur;}
+function fillMgr(id,arr){const el=document.getElementById(id),cur=el.value,list=[''].concat(uniq(arr.filter(Boolean)));el.innerHTML=list.map(v=>`<option value="${v}">${v||'전체 담당자'}</option>`).join('');if(list.includes(cur))el.value=cur;}
+function colSel(id,headers,kw){const e=document.getElementById(id);const cur=headers.find(h=>kw.some(k=>h.replace(/\s/g,'').includes(k)))||'';e.innerHTML='<option value="">—</option>'+headers.map(h=>`<option value="${h}" ${h===cur?'selected':''}>${h}</option>`).join('');}
+
+/* ===== 수금대장 그리드 ===== */
+function yearsList(){const ys=uniq(S.clients.flatMap(c=>(c.payments||[]).map(pYear)).filter(Boolean));const cur=String(new Date().getFullYear());[cur,String(+cur-1),String(+cur+1)].forEach(y=>{if(!ys.includes(y))ys.push(y);});return ys.sort().reverse();}
+function curYear(){return document.getElementById('gYear').value||String(new Date().getFullYear());}
+function slotPays(c,slot,Y){return (c.payments||[]).filter(p=>pYear(p)===Y&&pSlot(p)===slot);}
+function renderHome(){
+  reflectLock();
+  fillMgr('hMgr',S.clients.map(c=>c.manager));
+  fillSel('gYear',yearsList());
+  if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
+  const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
+  const list=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf));
+  let h='<thead><tr><th class="c">#</th><th class="l">상호</th><th class="l">담당</th><th>월보수</th>'+SLOTS.map(s=>`<th class="colh" data-col="${s[0]}" title="열 전체 선택/해제">${s[1]}</th>`).join('')+'<th>누적보수</th></tr></thead><tbody>';
+  list.forEach(c=>{const ci=S.clients.indexOf(c);
+    let cells='';SLOTS.forEach(s=>{const ps=slotPays(c,s[0],Y);
+      if(!ps.length){cells+=`<td class="c"><span class="add" data-addci="${ci}" data-slot="${s[0]}">＋</span></td>`;}
+      else{const allIss=ps.every(p=>p.issued);const sel=ps.some(p=>p._sel&&!p.issued);const d=fmtDate(ps[ps.length-1].date);const dd=d?d.slice(5).replace('-','/'):'●';const amt=ps.reduce((s2,p)=>s2+num(p.amount),0);
+        cells+=`<td class="c ${allIss?'cell-ok':''}" title="${d} · ${F(amt)}원${allIss?' · 발행완료':''}"><label style="cursor:pointer"><input type="checkbox" class="pchk" data-ci="${ci}" data-slot="${s[0]}" ${sel?'checked':''} ${allIss?'disabled':''} style="width:auto;vertical-align:middle"> ${allIss?'✓':''}${dd}</label></td>`;}});
+    h+=`<tr><td class="c">${ci+1}</td><td class="l"><span data-gub="${ci}" style="cursor:pointer;font-weight:700;font-size:11px;color:${c.gubun==='신대'?'var(--warn)':'var(--brand2)'}" title="클릭: 기장↔신대 전환">[${c.gubun||'기장'}]</span> <span class="lnk" data-open="${ci}">${c.name||'(무명)'}</span></td><td class="l">${c.manager||''}</td><td>${F(num(c.feeGross)||num(c.feeNet))}</td>${cells}<td>${F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s2,p)=>s2+num(p.amount),0))}</td></tr>`;});
+  document.getElementById('gridTable').innerHTML=h+'</tbody>';
+  const B=S.clients.reduce((s,c)=>s+num(c.billed),0),C=S.clients.reduce((s,c)=>s+collectedOf(c),0);
+  document.getElementById('kClients').textContent=S.clients.length;document.getElementById('kBilled').textContent=F(B);document.getElementById('kCollected').textContent=F(C);document.getElementById('kBalance').textContent=F(B-C);document.getElementById('kRate').textContent=B?Math.round(C/B*100)+'%':'0%';
+  document.querySelectorAll('#gridTable [data-open]').forEach(s=>s.onclick=()=>openClient(+s.dataset.open));
+  document.querySelectorAll('.pchk').forEach(x=>x.onchange=e=>{slotPays(S.clients[e.target.dataset.ci],e.target.dataset.slot,Y).filter(p=>!p.issued).forEach(p=>p._sel=e.target.checked);updateSel();});
+  document.querySelectorAll('.colh').forEach(th=>th.onclick=()=>{const col=th.dataset.col;const all=[];list.forEach(c=>slotPays(c,col,Y).filter(p=>!p.issued).forEach(p=>all.push(p)));const target=!all.every(p=>p._sel);all.forEach(p=>p._sel=target);renderHome();});
+  document.querySelectorAll('.add').forEach(a=>a.onclick=()=>addPayCell(+a.dataset.addci,a.dataset.slot));
+  updateSel();
+}
+function selectedPays(){const out=[];S.clients.forEach(c=>(c.payments||[]).forEach(p=>{if(p._sel&&!p.issued)out.push({c,p});}));return out;}
+function updateSel(){const sel=selectedPays();let s=0,t=0;sel.forEach(r=>{s+=supplyOf(r.c,r.p);t+=supplyOf(r.c,r.p)+taxOf(r.c,r.p);});document.getElementById('selCnt').textContent=sel.length;document.getElementById('selSupply').textContent=F(s);document.getElementById('selTotal').textContent=F(t);}
+['hSearch','hMgr','gYear'].forEach(id=>document.getElementById(id).oninput=renderHome);
+document.getElementById('lockBtn').onclick=()=>{if(!pw()){alert('④설정에서 수정 암호를 설정하면 보호가 켜집니다.');return;}if(Date.now()<UNLOCKED){UNLOCKED=0;reflectLock();}else{alert('추가·수정은 암호 입력 후 3분간 유지됩니다. 삭제는 매번 암호를 묻습니다.');}};
+function addPayCell(ci,slot){if(!requireWrite())return;const c=S.clients[ci];const Y=curYear();
+  const defDate=/^\d+$/.test(slot)?(Y+'-'+String(slot).padStart(2,'0')+'-01'):(Y+'-'+(slot==='확정신고'?'05-31':new Date().toISOString().slice(5,10)));
+  const date=prompt('입금일 (YYYY-MM-DD)',defDate);if(!date)return;const amount=num(prompt('입금액',num(c.feeGross)||''));if(!amount)return;
+  c.payments=c.payments||[];c.payments.push({date:fmtDate(date),amount,month:fmtDate(date).slice(0,7),slot,issued:false});
+  Store.save();renderHome();pushClient(c);}
+
+/* 발행 */
+let TPL=null;try{TPL=JSON.parse(localStorage.getItem('samho_tpl')||'null');}catch(e){}
+const DEFAULT_TPL={headers:['작성일자','공급받는자 등록번호','상호','대표자','업태','종목','품목','공급가액','세액','합계금액','담당자','입금일','비고'],map:['date','regno','name','ceo','bizType','bizItem','item','supply','tax','total','manager','paydate','note']};
+function resolveF(f,x){switch(f){case 'date':return x.issueDate;case 'date8':return x.issueDate?String(x.issueDate).replace(/-/g,''):'';case 'regno':return x.c.bizno||x.ssnPlain||'';case 'bizno':return x.c.bizno||'';case 'ssn':return x.ssnPlain||'';case 'name':return x.c.name||'';case 'ceo':return x.c.ceo||'';case 'bizType':return x.c.bizType||'';case 'bizItem':return x.c.bizItem||'';case 'email':return x.c.email||'';case 'addr':return x.c.addr||'';case 'tel':return x.c.tel||'';case 'item':return '기장수수료';case 'supply':return x.supply;case 'tax':return x.tax;case 'total':return x.supply+x.tax;case 'paydate':return x.p.date||'';case 'payamount':return num(x.p.amount);case 'manager':return x.c.manager||'';case 'note':return x.c.note||'';default:return '';}}
+document.getElementById('issueBtn').onclick=async()=>{const sel=selectedPays();if(!sel.length){alert('월 칸 또는 열을 선택하세요.');return;}
+  if(sel.some(r=>!r.c.bizno&&r.c.ssn)&&!CRYPTOKEY){alert('비사업자 발행분의 주민번호 복호화를 위해 ④설정에서 공용 암호키를 입력하세요.');return;}
+  const issueDate=document.getElementById('gIssueDate').value;if(!issueDate){alert('작성일자를 입력하세요.');return;}
+  if(!confirm(sel.length+'건을 '+issueDate+' 작성일자로 발행할까요?'))return;
+  const tpl=TPL||DEFAULT_TPL;const cols=tpl.cols||(tpl.headers?tpl.headers.length:tpl.map.length);const aoa=tpl.top?tpl.top.map(r=>r.slice()):[tpl.headers.slice()];const changed=[];
+  for(const r of sel){const ssnPlain=await decSsn(r.c.ssn);const x={c:r.c,p:r.p,supply:supplyOf(r.c,r.p),tax:taxOf(r.c,r.p),issueDate,ssnPlain};const row=new Array(cols).fill('');tpl.map.forEach((f,ci)=>{if(f)row[ci]=resolveF(f,x);});aoa.push(row);r.p.issued=true;r.p.issueDate=issueDate;r.p.supply=x.supply;r.p.tax=x.tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'세금계산서');XLSX.writeFile(wb,'세무법인삼호 남부지점 세금계산서 발행_'+issueDate.replace(/-/g,'')+'.xls');
+  Store.save();renderHome();if(CONNECTED()){for(const c of changed)await pushClient(c);chip('☁ 발행상태 동기화');}};
+
+/* 거래처 추가/명단/내보내기 */
+document.getElementById('newClient').onclick=()=>{if(!requireWrite())return;openClient(-1);};
+const IMPG={name:['상호'],ceo:['대표자'],bizno:['사업자','법인등록'],ssn:['주민'],tel:['연락'],openDate:['개업'],contractDate:['계약'],email:['이메일','메일'],bizType:['업태'],bizItem:['종목'],feeNet:['제외'],feeGross:['보수'],addr:['사업장'],calAddr:['달력'],wht:['원천'],note:['비고'],manager:['담당']};
+document.getElementById('impBtn').onclick=()=>{if(!requireWrite())return;document.getElementById('impFile').click();};
+document.getElementById('impFile').onchange=e=>{if(e.target.files[0])readXlsx(e.target.files[0],importClients);};
+async function importClients(d){const map={};MF.forEach(f=>{const k=f[0];if(k==='ceo')map[k]=d.headers.find(h=>h.includes('대표자')&&!h.includes('주민'))||'';else if(k==='feeGross')map[k]=d.headers.find(h=>h.includes('보수')&&!h.includes('제외'))||'';else map[k]=d.headers.find(h=>(IMPG[k]||[]).some(x=>h.replace(/\s/g,'').includes(x)))||'';});
+  if(d.rows.some(r=>map.ssn&&String(r[map.ssn]||'').trim())&&!CRYPTOKEY){alert('주민번호를 가져오려면 ④설정에서 공용 암호키를 먼저 입력하세요.');return;}
+  let add=0,upd=0;const touched=[];
+  for(const r of d.rows){const o={};for(const f of MF){const col=map[f[0]];if(!col)continue;let v=r[col];if(['feeNet','feeGross'].includes(f[0]))v=num(v);else if(['openDate','contractDate'].includes(f[0]))v=fmtDate(v);else if(f[0]==='ssn'){v=String(v||'').trim();v=v?await encSsn(v):'';}else v=String(v||'').trim();o[f[0]]=v;}
+    if(!o.name)continue;let ex=dupClient(o.name,o.bizno,null);
+    if(ex){Object.assign(ex,o);upd++;touched.push(ex);}else{const nc=Object.assign({id:newId(),billed:0,payments:[],appliedPays:[],appliedBills:[]},o);S.clients.push(nc);add++;touched.push(nc);}}
+  Store.save();renderHome();if(CONNECTED()){chip('☁ 올리는 중...');for(const c of touched)await pushClient(c);chip('☁ 동기화 완료');}alert(`불러오기 완료 — 신규 ${add} · 갱신 ${upd}`);}
+document.getElementById('expClients').onclick=()=>{const data=[MF.map(f=>f[1])];S.clients.forEach(c=>data.push(MF.map(f=>f[0]==='ssn'?(c.ssn?'●●●●●●-●●●●●●●':''):(c[f[0]]??''))));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'명단');XLSX.writeFile(wb,'거래처명단_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xls');};
+
+/* 모달 */
+let editIdx=-1;
+async function openClient(idx){editIdx=idx;const c=idx>=0?S.clients[idx]:{};
+  document.getElementById('mTitle').textContent=idx>=0?(c.name||'거래처 상세'):'신규 거래처 수임';
+  document.getElementById('mFields').innerHTML=MF.map(f=>`<div><label class="fld">${f[1]}</label><input data-k="${f[0]}" value="${f[0]==='ssn'?'':(c[f[0]]??'')}"></div>`).join('');
+  const ssnEl=document.querySelector('#mFields [data-k="ssn"]');if(ssnEl)ssnEl.value=await decSsn(c.ssn);
+  document.getElementById('mBilled').value=num(c.billed);document.getElementById('mCollected').value=F(collectedOf(c))+' 원';document.getElementById('mBalance').value=F(bal(c))+' 원';
+  document.getElementById('mLastPay').value=c.lastPayDate?(c.lastPayDate+' · '+F(c.lastPayAmount)+'원'):'-';
+  renderPay(c);document.getElementById('mDelete').style.display=idx>=0?'inline-block':'none';document.getElementById('overlay').style.display='flex';}
+function renderPay(c){const ps=c.payments||[];document.getElementById('mPayTable').innerHTML='<thead><tr><th class="l">입금일</th><th class="c">구분</th><th>금액</th><th class="c">발행</th><th></th></tr></thead><tbody>'+(ps.length?ps.slice().reverse().map((p,ri)=>{const real=ps.length-1-ri;const sl=pSlot(p);const lbl=/^\d+$/.test(sl)?sl+'월':sl;return`<tr><td class="l">${p.date||''}</td><td class="c">${lbl}</td><td>${F(p.amount)}</td><td class="c">${p.issued?('<span style="color:var(--ok)">✓'+(p.issueDate||'')+'</span>'):'미발행'}</td><td class="c"><button class="x sm" data-pd="${real}">×</button></td></tr>`;}).join(''):'<tr><td colspan="5" class="c muted">내역 없음</td></tr>')+'</tbody>';
+  document.querySelectorAll('#mPayTable [data-pd]').forEach(b=>b.onclick=()=>{if(!requireDelete())return;const p=c.payments[b.dataset.pd];c.appliedPays=(c.appliedPays||[]).filter(k=>k!==(p.date+'|'+p.amount));c.payments.splice(b.dataset.pd,1);document.getElementById('mCollected').value=F(collectedOf(c))+' 원';document.getElementById('mBalance').value=F(bal(c))+' 원';renderPay(c);Store.save();pushClient(c);});}
+document.getElementById('mAddPay').onclick=()=>{if(!requireWrite())return;if(editIdx<0){alert('먼저 거래처를 저장하세요.');return;}const c=S.clients[editIdx];const date=prompt('입금일 (YYYY-MM-DD)',new Date().toISOString().slice(0,10));if(!date)return;const amount=num(prompt('입금액',num(c.feeGross)||''));if(!amount)return;c.payments=c.payments||[];c.payments.push({date:fmtDate(date),amount,month:fmtDate(date).slice(0,7),slot:String(parseInt(fmtDate(date).slice(5,7),10)),issued:false});document.getElementById('mCollected').value=F(collectedOf(c))+' 원';renderPay(c);Store.save();pushClient(c);};
+function closeModal(){document.getElementById('overlay').style.display='none';}
+document.getElementById('mClose').onclick=closeModal;document.getElementById('mCancel').onclick=closeModal;
+document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
+document.getElementById('mBilled').oninput=()=>{document.getElementById('mBalance').value=F(num(document.getElementById('mBilled').value)-num(String(document.getElementById('mCollected').value)))+' 원';};
+document.getElementById('mSave').onclick=async()=>{if(!requireWrite())return;const isNew=editIdx<0;const c=isNew?{id:newId(),payments:[],appliedPays:[],appliedBills:[]}:S.clients[editIdx];
+  let ssnVal=null,nameVal='',biznoVal='';document.querySelectorAll('#mFields input').forEach(i=>{const k=i.dataset.k;if(k==='ssn')ssnVal=i.value;else{c[k]=['feeNet','feeGross'].includes(k)?num(i.value):i.value;if(k==='name')nameVal=i.value;if(k==='bizno')biznoVal=i.value;}});
+  const dup=dupClient(nameVal,biznoVal,isNew?null:c.id);if(dup){alert('이미 등록된 거래처입니다: '+dup.name+'\n(중복 등록이 차단되었습니다)');return;}
+  if(ssnVal!==null){if(ssnVal===''){c.ssn='';}else if(ssnVal.startsWith('🔒')||ssnVal.startsWith('🔑')){}else{if(!CRYPTOKEY){alert('주민번호 저장하려면 ④설정에서 공용 암호키를 먼저 입력하세요.');return;}c.ssn=await encSsn(ssnVal);}}
+  c.billed=num(document.getElementById('mBilled').value);if(isNew)S.clients.push(c);Store.save();closeModal();renderHome();pushClient(c);};
+document.getElementById('mDelete').onclick=()=>{if(!requireDelete())return;const c=S.clients[editIdx];S.clients.splice(editIdx,1);Store.save();closeModal();renderHome();pushDelete(c.id);};
+
+/* 입금 업로드 (거래처 선등록 강제) */
+let rawBank=null,rawDeo=null;
+bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['입금자','보낸','내용','적요','상대','거래']);colSel('mAmount',d.headers,['입금','금액']);colSel('mDate',d.headers,['일자','날짜','거래일']);}));
+bindDrop('dropDeobil','fileDeobil',f=>readXlsx(f,d=>{rawDeo=d;document.getElementById('dropDeobil').classList.add('has');document.getElementById('infoDeobil').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('deoSel').classList.remove('hidden');colSel('dName',d.headers,['거래처','상호','업체','회사']);colSel('dAmount',d.headers,['청구','금액','보수','수수료']);}));
+document.getElementById('applyBank').onclick=async()=>{if(!requireWrite())return;if(!S.clients.length){alert('먼저 ①에서 거래처를 등록하세요.');return;}const p=document.getElementById('mPayer').value,a=document.getElementById('mAmount').value,dt=document.getElementById('mDate').value;if(!p||!a){alert('입금자·입금액 열을 지정하세요.');return;}
+  let applied=0,dup=0;const unmatched=[],changed=[],hist=[];
+  rawBank.rows.forEach(r=>{const amount=num(r[a]);if(!amount)return;const date=dt?fmtDate(r[dt]):'';const month=(date||'').slice(0,7);const c=findClient(r[p]);if(!c){unmatched.push(String(r[p]||'')+' ('+F(amount)+')');return;}const k=date+'|'+amount;c.appliedPays=c.appliedPays||[];if(c.appliedPays.includes(k)){dup++;return;}c.appliedPays.push(k);c.payments=c.payments||[];c.payments.push({date,amount,month,slot:date?String(parseInt(date.slice(5,7),10)):'기타',issued:false});if(!c.lastPayDate||date>=c.lastPayDate){c.lastPayDate=date;c.lastPayAmount=amount;}const hr={month,company:c.name,manager:c.manager||'',billed:0,collected:amount};S.history.push(hr);hist.push(hr);if(!changed.includes(c))changed.push(c);applied++;});
+  Store.save();document.getElementById('bankResult').innerHTML=`✅ 반영 ${applied} · 중복제외 ${dup} · 미등록 ${unmatched.length}`;
+  document.getElementById('unmatchBox').innerHTML=unmatched.length?`<div class="note"><b>미등록 입금자(반영 안 됨)</b> — ①에서 거래처 등록 후 다시 반영하세요:<br>${unmatched.slice(0,30).join(', ')}${unmatched.length>30?' 외':''}</div>`:'';
+  if(CONNECTED()){chip('☁ 동기화 중...');for(const c of changed)await pushClient(c);await pushHistory(hist);chip('☁ 동기화 완료');}};
+document.getElementById('applyDeobil').onclick=async()=>{if(!requireWrite())return;const n=document.getElementById('dName').value,a=document.getElementById('dAmount').value;if(!n||!a){alert('거래처·청구액 열을 지정하세요.');return;}const month=new Date().toISOString().slice(0,7);let applied=0,dup=0;const unmatched=[],changed=[],hist=[];
+  rawDeo.rows.forEach(r=>{const amount=num(r[a]);const c=findClient(r[n]);if(!c){if(String(r[n]||'').trim())unmatched.push(String(r[n]));return;}c.appliedBills=c.appliedBills||[];if(c.appliedBills.includes(month)){dup++;return;}c.appliedBills.push(month);c.billed=num(c.billed)+amount;const hr={month,company:c.name,manager:c.manager||'',billed:amount,collected:0};S.history.push(hr);hist.push(hr);if(!changed.includes(c))changed.push(c);applied++;});
+  Store.save();document.getElementById('deoResult').innerHTML=`✅ 청구 반영 ${applied} · 중복월제외 ${dup} · 미등록 ${unmatched.length}`;if(CONNECTED()){for(const c of changed)await pushClient(c);await pushHistory(hist);chip('☁ 동기화 완료');}};
+
+/* 발행 양식 등록 */
+const TFIELDS=[['','(빈칸)'],['date8','작성일자(YYYYMMDD)'],['date','작성일자(YYYY-MM-DD)'],['regno','공급받는자 등록번호(자동)'],['bizno','사업자등록번호'],['ssn','주민등록번호'],['name','상호'],['ceo','대표자/성명'],['bizType','업태'],['bizItem','종목'],['email','이메일'],['addr','주소'],['tel','연락처'],['item','품목'],['supply','공급가액'],['tax','세액'],['total','합계금액'],['paydate','입금일'],['payamount','입금액'],['manager','담당자'],['note','비고']];
+let tplAoa=null,tplHeaderRow=0;
+function colL(i){var s='';i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+function pickHeader(aoa){var kw=['작성','사업자','등록번호','공급가','세액','상호','거래처','종목','업태','이메일','주민','품목','합계'];var best=-1,bi=0;aoa.forEach(function(r,i){var sc=0;(r||[]).forEach(function(c){var t=String(c).replace(/\s/g,'');kw.forEach(function(k){if(t.indexOf(k)>=0)sc++;});});if(sc>best){best=sc;bi=i;}});return bi;}
+function readAoa(file,cb){var fr=new FileReader();fr.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];cb(XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
+function guessField(h){h=String(h).replace(/\s/g,'');if(/주민/.test(h))return 'ssn';if(/작성|발행일/.test(h)&&!/입금/.test(h))return 'date8';if(/등록번호|사업자|공급받는자번호/.test(h))return 'regno';if(/상호|거래처|업체/.test(h))return 'name';if(/대표|성명/.test(h))return 'ceo';if(/업태/.test(h))return 'bizType';if(/종목/.test(h))return 'bizItem';if(/이메일|메일/.test(h))return 'email';if(/주소/.test(h))return 'addr';if(/품목|품명|내역|적요/.test(h))return 'item';if(/공급가/.test(h))return 'supply';if(/세액|부가세/.test(h))return 'tax';if(/합계|공급대가|총액/.test(h))return 'total';if(/입금일/.test(h))return 'paydate';if(/입금액/.test(h))return 'payamount';if(/담당/.test(h))return 'manager';if(/비고/.test(h))return 'note';return '';}
+function renderTplMap(aoa,saved){tplAoa=aoa;tplHeaderRow=(saved&&saved.headerRow!=null)?saved.headerRow:pickHeader(aoa);var cols=Math.max.apply(null,aoa.map(function(r){return (r||[]).length;}));var header=aoa[tplHeaderRow]||[];var map=(saved&&saved.map)||[];var h='<div style="grid-column:1/-1" class="muted">라벨 행: '+(tplHeaderRow+1)+'행 자동감지 · 채울 열만 항목을 지정하고 나머지는 (빈칸)으로 두세요. 작성일자 열에는 "작성일자(YYYYMMDD)"를 고르세요.</div>';for(var i=0;i<cols;i++){var cur=map[i]!=null?map[i]:guessField(header[i]||'');h+='<div><label class="fld">'+colL(i)+' · '+(((header[i]||'')+'').slice(0,16))+'</label><select data-i="'+i+'">'+TFIELDS.map(function(f){return '<option value="'+f[0]+'" '+(f[0]===cur?'selected':'')+'>'+f[1]+'</option>';}).join('')+'</select></div>';}document.getElementById('tplMap').innerHTML=h;document.getElementById('tplBtns').style.display='flex';}
+function tplStatus(){document.getElementById('tplStatus').textContent=TPL?('· 등록됨('+(TPL.cols||(TPL.headers?TPL.headers.length:0))+'열)'):'· 미등록(기본형식)';}
+bindDrop('dropTpl','fileTpl',function(f){readAoa(f,function(aoa){document.getElementById('dropTpl').classList.add('has');renderTplMap(aoa,null);});});
+document.getElementById('saveTpl').onclick=function(){if(!tplAoa)return;var map=[];document.querySelectorAll('#tplMap select').forEach(function(s){map[+s.dataset.i]=s.value;});var cols=Math.max.apply(null,tplAoa.map(function(r){return (r||[]).length;}));TPL={top:tplAoa.slice(0,tplHeaderRow+1),cols:cols,map:map,headerRow:tplHeaderRow};localStorage.setItem('samho_tpl',JSON.stringify(TPL));tplStatus();alert('발행 양식 저장됨 (머리글 '+(tplHeaderRow+1)+'행 보존, '+cols+'열)');};
+document.getElementById('clearTpl').onclick=function(){TPL=null;localStorage.removeItem('samho_tpl');document.getElementById('tplMap').innerHTML='';document.getElementById('tplBtns').style.display='none';tplStatus();};
+
+/* 실적 */
+function renderPerf(){fillSel('perfView',['all'].concat(uniq(S.history.map(h=>h.manager).filter(Boolean))),v=>v==='all'?'전체 담당자':v);fillSel('perfMonth',[''].concat(uniq(S.history.map(h=>h.month)).sort().reverse()),v=>v||'전체 기간');const mgr=document.getElementById('perfView').value,mon=document.getElementById('perfMonth').value;const data=S.history.filter(h=>(mgr==='all'||h.manager===mgr)&&(!mon||h.month===mon));const agg={};data.forEach(h=>{const k=h.manager||'(미지정)';agg[k]=agg[k]||{b:0,c:0,n:0};agg[k].b+=num(h.billed);agg[k].c+=num(h.collected);agg[k].n++;});const max=Math.max(1,...Object.values(agg).map(a=>a.b||a.c));let h1='<thead><tr><th class="l">담당자</th><th>건수</th><th>매출(청구)</th><th>수금</th><th>수금률</th><th class="l">비중</th></tr></thead><tbody>';Object.entries(agg).sort((a,b)=>(b[1].b+b[1].c)-(a[1].b+a[1].c)).forEach(([k,v])=>h1+=`<tr><td class="l">${k}</td><td>${v.n}</td><td>${F(v.b)}</td><td>${F(v.c)}</td><td>${v.b?Math.round(v.c/v.b*100):0}%</td><td class="l"><div class="bar"><i style="width:${(v.b||v.c)/max*100}%"></i></div></td></tr>`);document.getElementById('perfTable').innerHTML=h1+'</tbody>';let h2='<thead><tr><th class="l">월</th><th class="l">업체</th><th class="l">담당자</th><th>매출</th><th>수금</th></tr></thead><tbody>';data.slice().reverse().forEach(h=>h2+=`<tr><td class="l">${h.month}</td><td class="l">${h.company}</td><td class="l">${h.manager}</td><td>${num(h.billed)?F(h.billed):''}</td><td>${num(h.collected)?F(h.collected):''}</td></tr>`);document.getElementById('perfDetail').innerHTML=h2+'</tbody>';}
+document.getElementById('perfView').onchange=renderPerf;document.getElementById('perfMonth').onchange=renderPerf;
+
+/* 설정 */
+const GAS=["function doGet(e){ return out_(loadAll_()); }","function doPost(e){ var req=JSON.parse(e.postData.contents), a=req.action;","  if(a==='load') return out_(loadAll_());","  if(a==='saveClient'){ upsert_(req.client); return out_({ok:true}); }","  if(a==='deleteClient'){ del_(req.id); return out_({ok:true}); }","  if(a==='addHistory'){ addHist_(req.rows||[]); return out_({ok:true}); }","  return out_({ok:false}); }","function out_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }","var H=['id','name','ceo','bizno','ssn','tel','openDate','contractDate','email','bizType','bizItem','feeNet','feeGross','addr','calAddr','wht','note','manager','billed','collected','lastPayDate','lastPayAmount','payments','appliedPays','appliedBills'];","var J=['payments','appliedPays','appliedBills'];","function sh_(n){ var s=SpreadsheetApp.getActiveSpreadsheet(), x=s.getSheetByName(n); if(!x)x=s.insertSheet(n); return x; }","function cs_(){ var s=sh_('clients'); if(s.getLastRow()===0)s.appendRow(H); return s; }","function loadAll_(){ var s=cs_(), v=s.getDataRange().getValues(), hd=v.shift();","  var clients=v.filter(function(r){return r[0]!=='';}).map(function(r){var o={};hd.forEach(function(h,i){o[h]=r[i];});J.forEach(function(k){try{o[k]=o[k]?JSON.parse(o[k]):[];}catch(e){o[k]=[];}});return o;});","  var hs=sh_('history'), hv=hs.getDataRange().getValues(), history=[];","  if(hv.length>1){var hh=hv.shift();history=hv.filter(function(r){return r[0]!=='';}).map(function(r){var o={};hh.forEach(function(h,i){o[h]=r[i];});return o;});}","  return {clients:clients, history:history}; }","function row_(c){ return H.map(function(h){ return J.indexOf(h)>=0?JSON.stringify(c[h]||[]):(c[h]==null?'':c[h]); }); }","function upsert_(c){ var s=cs_(), ids=s.getRange(1,1,Math.max(s.getLastRow(),1),1).getValues().map(function(x){return x[0];}); var i=ids.indexOf(c.id), d=row_(c);","  if(i>0){ s.getRange(i+1,1,1,d.length).setValues([d]); } else { s.appendRow(d); } }","function del_(id){ var s=cs_(), ids=s.getRange(1,1,Math.max(s.getLastRow(),1),1).getValues().map(function(x){return x[0];}); var i=ids.indexOf(id); if(i>0)s.deleteRow(i+1); }","function addHist_(rows){ var s=sh_('history'); if(s.getLastRow()===0)s.appendRow(['month','company','manager','billed','collected']); rows.forEach(function(r){ s.appendRow([r.month,r.company,r.manager,r.billed,r.collected]); }); }"].join("\n");
+document.getElementById('gasCode').value=GAS;
+document.getElementById('copyGas').onclick=()=>{navigator.clipboard.writeText(GAS).then(()=>document.getElementById('copyGas').textContent='✓ 복사됨');};
+document.getElementById('cfgPw').value=localStorage.getItem('samho_pw')||'';
+document.getElementById('savePw').onclick=()=>{localStorage.setItem('samho_pw',document.getElementById('cfgPw').value);UNLOCKED=false;reflectLock();document.getElementById('pwMsg').textContent='저장됨';};
+document.getElementById('cfgUrl').value=localStorage.getItem('samho_url')||'';document.getElementById('cfgKey').value=localStorage.getItem('samho_key')||'';
+document.getElementById('saveCfg').onclick=async()=>{localStorage.setItem('samho_url',document.getElementById('cfgUrl').value.trim());const k=document.getElementById('cfgKey').value;localStorage.setItem('samho_key',k);if(k)await setupKey(k);document.getElementById('connMsg').textContent='저장됨. "불러오기"로 동기화하세요.';chip(CONNECTED()?'☁ 연동 설정됨':'로컬 모드');};
+document.getElementById('testConn').onclick=async()=>{const m=document.getElementById('connMsg');m.textContent='테스트 중...';try{const r=await jsonpLoad();m.textContent='✅ 연결 성공 (거래처 '+(r.clients?r.clients.length:0)+'건)';}catch(e){m.textContent='❌ 실패 — URL/배포권한(모든 사용자) 확인';}};
+document.getElementById('cloudPull').onclick=async()=>{const m=document.getElementById('connMsg');try{m.textContent='불러오는 중...';await cloudLoad();renderHome();m.textContent='✅ 완료';}catch(e){m.textContent='❌ 실패';}};
+document.getElementById('cloudPushAll').onclick=async()=>{if(!CONNECTED()){alert('먼저 URL 저장');return;}if(!confirm('현재 PC 데이터를 클라우드로 올릴까요?'))return;const m=document.getElementById('connMsg');m.textContent='올리는 중...';for(const c of S.clients)await pushClient(c);await pushHistory(S.history);m.textContent='✅ 전체 업로드 완료';};
+document.getElementById('saveMgr').onclick=()=>{S.managers=document.getElementById('mgrList').value.split(',').map(s=>s.trim()).filter(Boolean);Store.save();};
+document.getElementById('backupExport').onclick=()=>{const cl=JSON.parse(JSON.stringify(S));cl.clients.forEach(c=>{delete c._sel;(c.payments||[]).forEach(p=>delete p._sel);});const b=new Blob([JSON.stringify(cl,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='삼호백업_'+new Date().toISOString().slice(0,10)+'.json';a.click();};
+document.getElementById('backupImportBtn').onclick=()=>document.getElementById('backupImport').click();
+document.getElementById('backupImport').onchange=e=>{const fr=new FileReader();fr.onload=ev=>{try{mem=JSON.parse(ev.target.result);S=mem;Store.save();alert('복원 완료');location.reload();}catch(x){alert('복원 실패');}};fr.readAsText(e.target.files[0]);};
+document.getElementById('resetAll').onclick=()=>{if(!requireDelete())return;if(confirm('로컬 데이터를 삭제할까요?(클라우드 시트는 유지)')){mem=def();S=mem;Store.save();location.reload();}};
+
+tplStatus();reflectLock();setInterval(reflectLock,1000);
+(async function(){const k=localStorage.getItem('samho_key')||'';if(k){try{await setupKey(k);}catch(e){}}if(CONNECTED()){chip('☁ 불러오는 중...');try{await cloudLoad();}catch(e){chip('⚠ 연동 실패(로컬)');}}renderHome();})();
+</script>
+</div>
