@@ -96,11 +96,11 @@
         <button id="cashIssueBtn">🧾 현금영수증 발행</button>
       </div>
       <div class="kpi" style="margin:10px 0">
-        <div class="kbox"><div class="v" id="kClients">0</div><div class="l">거래처 수</div></div>
-        <div class="kbox"><div class="v" id="kBilled">0</div><div class="l">누적 청구</div></div>
-        <div class="kbox"><div class="v" id="kCollected">0</div><div class="l">누적 수금</div></div>
-        <div class="kbox" style="background:linear-gradient(135deg,#b35900,#d97706)"><div class="v" id="kBalance">0</div><div class="l">미수 잔액</div></div>
-        <div class="kbox" style="background:linear-gradient(135deg,#1a7f37,#34a853)"><div class="v" id="kRate">0%</div><div class="l">수금률</div></div>
+        <div class="kbox"><div class="v" id="kClients">0</div><div class="l">거래처수</div></div>
+        <div class="kbox"><div class="v" id="kWj">0</div><div class="l" id="kWjL">월정미수</div></div>
+        <div class="kbox"><div class="v" id="kFt">0</div><div class="l" id="kFtL">확정신고미수</div></div>
+        <div class="kbox"><div class="v" id="kEtc">0</div><div class="l" id="kEtcL">기타미수</div></div>
+        <div class="kbox" style="background:linear-gradient(135deg,#b35900,#d97706)"><div class="v" id="kTotal">0</div><div class="l" id="kTotalL">총미수</div></div>
       </div>
       <div class="scroll"><table id="gridTable"></table></div>
       <div class="note" id="tplWarn" style="margin-top:8px"></div>
@@ -258,7 +258,7 @@ function misuMonths(c,Y){const now=new Date();const curY=now.getFullYear();const
 function misuCalc(c,Y){var now=new Date();var curY=now.getFullYear();var curM=now.getMonth()+1;var yNum=parseInt(Y,10);var upto=(yNum<curY)?12:(yNum>curY?0:curM);var feeN=num(c.feeNet)||Math.round((num(c.feeGross)||0)/1.1);var wjMiss=0;if(upto>=1){var due;if(c.gubun==='신대'&&Array.isArray(c.payMonths)&&c.payMonths.length){due=c.payMonths.filter(function(m){return m>=1&&m<=upto;});}else{due=[];for(var m=1;m<=upto;m++)due.push(m);}due.forEach(function(m){var has=(c.payments||[]).some(function(p){return pYear(p)===String(Y)&&parseInt(pSlot(p),10)===m;});if(!has)wjMiss++;});}var ftFee=num(c.finalTaxFee),ftMiss=0;if(ftFee>0){var dueCnt=[3,5].filter(function(m){return m<=upto;}).length;var paidCnt=(c.payments||[]).filter(function(p){return pYear(p)===String(Y)&&pSlot(p)==='확정신고';}).length;ftMiss=Math.max(0,dueCnt-paidCnt);}var etcFee=num(c.etcFee),etcMiss=0;if(etcFee>0&&upto>=1){var paid=(c.payments||[]).some(function(p){return pYear(p)===String(Y)&&pSlot(p)==='기타';});if(!paid)etcMiss=1;}return {wjCnt:wjMiss,wjAmt:wjMiss*feeN,ftCnt:ftMiss,ftAmt:ftMiss*ftFee,etcCnt:etcMiss,etcAmt:etcMiss*etcFee};}
 
 /* 수정 보호 암호 */
-let UNLOCKED=0;let GBF='';let MISU='';const HOLD=3*60*1000;
+let UNLOCKED=0;let GBF='';let MISU='';let SORT={key:'',dir:1};let FILTERS={};const HOLD=3*60*1000;
 const pw=()=>localStorage.getItem('samho_pw')||'';
 function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
@@ -305,8 +305,11 @@ function renderHome(){
   if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
   const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
-  const list=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf)&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대'))&&(!MISU||(MISU==='3'?misuMonths(c,Y)>=3:misuMonths(c,Y)===parseInt(MISU,10))));
-  let h='<thead><tr><th class="c">#</th><th class="c">구분</th><th class="l">상호</th><th class="l">담당</th><th class="c" style="color:var(--warn)">미수</th><th>월보수</th>'+SLOTS.map(s=>`<th class="colh" data-col="${s[0]}" title="열 전체 선택/해제">${s[1]}</th>`).join('')+'<th>누적보수</th></tr></thead><tbody>';
+  const baseList=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf)&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대'))&&(!MISU||(MISU==='3'?misuMonths(c,Y)>=3:misuMonths(c,Y)===parseInt(MISU,10))));
+  let list=applyColSort(applyColFilters(baseList,Y),Y);
+  const COLS=[['gubun','구분','c'],['name','상호','l'],['manager','담당','l'],['misu','미수','c'],['fee','월보수','']];
+  function fhdr(key,label,cls,isSlot){const arrow=SORT.key===key?(SORT.dir===1?' ▲':' ▼'):'';const act=(FILTERS[key]&&FILTERS[key].length)?'color:var(--warn);font-weight:800':'';return '<th class="'+cls+'"><span class="hfilt" data-col="'+key+'" style="cursor:pointer;'+act+'" title="정렬·필터">'+label+'▾'+arrow+'</span>'+(isSlot?' <span class="colh" data-col="'+key.slice(5)+'" title="열 전체 선택/해제" style="cursor:pointer;color:#999">☑</span>':'')+'</th>';}
+  let h='<thead><tr><th class="c">#</th>'+COLS.map(c=>fhdr(c[0],c[1],c[2],false)).join('')+SLOTS.map(s=>fhdr('slot:'+s[0],s[1],'c',true)).join('')+fhdr('total','누적보수','',false)+'</tr></thead><tbody>';
   list.forEach(c=>{const ci=S.clients.indexOf(c);
     let cells='';SLOTS.forEach(s=>{const ps=slotPays(c,s[0],Y);
       if(!ps.length){cells+=`<td class="c"><span class="add" data-addci="${ci}" data-slot="${s[0]}">＋</span></td>`;}
@@ -315,11 +318,17 @@ function renderHome(){
     h+=`<tr><td class="c">${ci+1}</td><td class="c"><span data-gub="${ci}" style="cursor:pointer;font-weight:700;font-size:11px;color:${c.gubun==='신대'?'var(--warn)':'#888'}" title="클릭: 기장↔신대 전환">[${c.gubun||'기장'}]</span></td><td class="l"><span class="lnk" data-open="${ci}">${c.name||'(무명)'}</span></td><td class="l">${c.manager||''}</td><td class="c" style="${misuMonths(c,Y)>0?'color:var(--warn);font-weight:700':'color:#bbb'}">${misuMonths(c,Y)}</td><td>${F(num(c.feeGross)||num(c.feeNet))}</td>${cells}<td>${F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s2,p)=>s2+num(p.amount),0))}</td></tr>`;});
   document.getElementById('gridTable').innerHTML=h+'</tbody>';
   const gj=S.clients.filter(c=>c.gubun!=='신대');
-  const B=gj.reduce((s,c)=>s+num(c.billed),0),C=gj.reduce((s,c)=>s+collectedOf(c),0);
-  document.getElementById('kClients').textContent=gj.length;document.getElementById('kBilled').textContent=F(B);document.getElementById('kCollected').textContent=F(C);document.getElementById('kBalance').textContent=F(B-C);document.getElementById('kRate').textContent=B?Math.round(C/B*100)+'%':'0%';
+  let wjC=0,wjA=0,ftC=0,ftA=0,etC=0,etA=0;
+  gj.forEach(c=>{const r=misuCalc(c,Y);wjC+=r.wjCnt;wjA+=r.wjAmt;ftC+=r.ftCnt;ftA+=r.ftAmt;etC+=r.etcCnt;etA+=r.etcAmt;});
+  document.getElementById('kClients').textContent=gj.length;
+  document.getElementById('kWj').textContent=F(wjA);document.getElementById('kWjL').textContent='월정미수 · '+wjC+'건';
+  document.getElementById('kFt').textContent=F(ftA);document.getElementById('kFtL').textContent='확정신고미수 · '+ftC+'건';
+  document.getElementById('kEtc').textContent=F(etA);document.getElementById('kEtcL').textContent='기타미수 · '+etC+'건';
+  document.getElementById('kTotal').textContent=F(wjA+ftA+etA);document.getElementById('kTotalL').textContent='총미수 · '+(wjC+ftC+etC)+'건';
   document.querySelectorAll('#gridTable [data-open]').forEach(s=>s.onclick=()=>openClient(+s.dataset.open));
   document.querySelectorAll('.pchk').forEach(x=>x.onchange=e=>{slotPays(S.clients[e.target.dataset.ci],e.target.dataset.slot,Y).filter(p=>!p.issued).forEach(p=>p._sel=e.target.checked);updateSel();});
-  document.querySelectorAll('.colh').forEach(th=>th.onclick=()=>{const col=th.dataset.col;const all=[];list.forEach(c=>slotPays(c,col,Y).filter(p=>!p.issued).forEach(p=>all.push(p)));const target=!all.every(p=>p._sel);all.forEach(p=>p._sel=target);renderHome();});
+  document.querySelectorAll('.hfilt').forEach(s=>s.onclick=e=>{e.stopPropagation();openColMenu(s.closest('th'),s.dataset.col,baseList,Y);});
+  document.querySelectorAll('.colh').forEach(th=>th.onclick=e=>{e.stopPropagation();const col=th.dataset.col;const all=[];list.forEach(c=>slotPays(c,col,Y).filter(p=>!p.issued).forEach(p=>all.push(p)));const target=!all.every(p=>p._sel);all.forEach(p=>p._sel=target);renderHome();});
   document.querySelectorAll('.add').forEach(a=>a.onclick=()=>addPayCell(+a.dataset.addci,a.dataset.slot));
   document.querySelectorAll('[data-gub]').forEach(g=>g.onclick=e=>{e.stopPropagation();if(!requireWrite())return;const c=S.clients[+g.dataset.gub];if(c.gubun!=='신대'){c.gubun='신대';const inp=prompt('신대 수금월을 쉼표로 입력 (예: 1,5,7) — 비우면 매달로 처리','1,5,7');if(inp!==null){c.payMonths=inp.split(',').map(x=>parseInt(x.trim(),10)).filter(m=>m>=1&&m<=12);}}else{c.gubun='기장';c.payMonths=[];}Store.save();renderHome();pushClient(c);});
   document.querySelectorAll('.gbf').forEach(b=>{const on=b.dataset.gbf===GBF;b.className='gbf sm '+(on?'':'sec');b.style.background=on?'var(--brand)':'';b.style.color=on?'#fff':'';b.onclick=()=>{GBF=b.dataset.gbf;renderHome();};});
@@ -328,6 +337,14 @@ function renderHome(){
 }
 function selectedPays(){const out=[];S.clients.forEach(c=>(c.payments||[]).forEach(p=>{if(p._sel&&!p.issued)out.push({c,p});}));return out;}
 function updateSel(){const sel=selectedPays();let s=0,t=0;sel.forEach(r=>{s+=supplyOf(r.c,r.p);t+=supplyOf(r.c,r.p)+taxOf(r.c,r.p);});document.getElementById('selCnt').textContent=sel.length;document.getElementById('selSupply').textContent=F(s);document.getElementById('selTotal').textContent=F(t);}
+function colSortVal(c,key,Y){if(key==='gubun')return c.gubun||'기장';if(key==='name')return c.name||'';if(key==='manager')return c.manager||'';if(key==='misu')return misuMonths(c,Y);if(key==='fee')return num(c.feeGross)||num(c.feeNet);if(key==='total')return (c.payments||[]).filter(p=>pYear(p)===Y).reduce((s,p)=>s+num(p.amount),0);if(key.slice(0,5)==='slot:'){const ps=slotPays(c,key.slice(5),Y);return ps.length?(fmtDate(ps[ps.length-1].date)||' '):'';}return '';}
+function colFiltVal(c,key,Y){if(key.slice(0,5)==='slot:')return slotPays(c,key.slice(5),Y).length?'입금':'미입금';if(key==='gubun')return c.gubun||'기장';if(key==='name')return c.name||'(무명)';if(key==='manager')return c.manager||'(미지정)';if(key==='misu')return String(misuMonths(c,Y));if(key==='fee')return F(num(c.feeGross)||num(c.feeNet));if(key==='total')return F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s,p)=>s+num(p.amount),0));return '';}
+const NUMKEYS=['misu','fee','total'];
+function applyColFilters(list,Y){return list.filter(c=>Object.keys(FILTERS).every(key=>{const sel=FILTERS[key];if(!sel||!sel.length)return true;return sel.indexOf(colFiltVal(c,key,Y))>=0;}));}
+function applyColSort(list,Y){if(!SORT.key)return list;const key=SORT.key,dir=SORT.dir,isN=NUMKEYS.indexOf(key)>=0;return list.slice().sort((a,b)=>{let x=colSortVal(a,key,Y),y=colSortVal(b,key,Y);if(isN)return (x-y)*dir;if(x===y)return 0;if(x==='')return 1;if(y==='')return -1;return String(x).localeCompare(String(y),'ko')*dir;});}
+function closeColMenu(){const m=document.getElementById('colMenu');if(m)m.remove();}
+function openColMenu(th,key,baseList,Y){closeColMenu();const vals=uniq(baseList.map(c=>colFiltVal(c,key,Y))).sort((a,b)=>String(a).localeCompare(String(b),'ko'));const cur=(FILTERS[key]&&FILTERS[key].length)?FILTERS[key]:vals.slice();const r=th.getBoundingClientRect();const m=document.createElement('div');m.id='colMenu';m.style.cssText='position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:8px;min-width:180px;font-size:12px;max-height:340px;overflow:auto';m.style.left=Math.min(r.left,window.innerWidth-200)+'px';m.style.top=(r.bottom+2)+'px';m.innerHTML='<div style="display:flex;gap:6px;margin-bottom:6px"><button class="sm sec" data-sort="asc" style="flex:1">▲ 오름</button><button class="sm sec" data-sort="desc" style="flex:1">▼ 내림</button></div><div style="border-top:1px solid var(--line);padding-top:6px"><label style="display:block;padding:2px 0"><input type="checkbox" id="cmAll" '+(!(FILTERS[key]&&FILTERS[key].length)?'checked':'')+' style="width:auto;vertical-align:middle"> (전체)</label>'+vals.map(v=>'<label style="display:block;padding:2px 0"><input type="checkbox" class="cmV" value="'+encodeURIComponent(v)+'" '+(cur.indexOf(v)>=0?'checked':'')+' style="width:auto;vertical-align:middle"> '+(v||'(빈값)')+'</label>').join('')+'</div><div style="display:flex;gap:6px;margin-top:8px"><button class="sm" data-act="apply" style="flex:1">적용</button><button class="sm sec" data-act="clear" style="flex:1">해제</button></div>';document.body.appendChild(m);m.querySelector('[data-sort="asc"]').onclick=()=>{SORT={key:key,dir:1};closeColMenu();renderHome();};m.querySelector('[data-sort="desc"]').onclick=()=>{SORT={key:key,dir:-1};closeColMenu();renderHome();};m.querySelector('#cmAll').onclick=e=>{m.querySelectorAll('.cmV').forEach(x=>x.checked=e.target.checked);};m.querySelector('[data-act="apply"]').onclick=()=>{const picked=[...m.querySelectorAll('.cmV')].filter(x=>x.checked).map(x=>decodeURIComponent(x.value));if(picked.length===0||picked.length===vals.length){delete FILTERS[key];}else{FILTERS[key]=picked;}closeColMenu();renderHome();};m.querySelector('[data-act="clear"]').onclick=()=>{delete FILTERS[key];SORT={key:'',dir:1};closeColMenu();renderHome();};}
+document.addEventListener('mousedown',e=>{const m=document.getElementById('colMenu');if(m&&!m.contains(e.target)&&!e.target.closest('.hfilt'))closeColMenu();});
 ['hSearch','hMgr','gYear'].forEach(id=>document.getElementById(id).oninput=renderHome);
 document.getElementById('lockBtn').onclick=()=>{if(!pw()){alert('④설정에서 수정 암호를 설정하면 보호가 켜집니다.');return;}if(Date.now()<UNLOCKED){UNLOCKED=0;reflectLock();}else{alert('추가·수정은 암호 입력 후 3분간 유지됩니다. 삭제는 매번 암호를 묻습니다.');}};
 function addPayCell(ci,slot){if(!requireWrite())return;const c=S.clients[ci];const Y=curYear();
