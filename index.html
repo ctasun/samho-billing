@@ -75,6 +75,9 @@
         <input type="file" id="impFile" accept=".xls,.xlsx" class="hidden">
         <button class="dl sm" id="expClients">⬇ 내보내기</button>
       </div>
+      <div class="row" style="margin-top:6px">
+        <span class="muted" id="manualInfo"></span>
+      </div>
       <div class="row" style="margin-top:8px">
         <span class="muted">⚠ 미수 필터</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
@@ -120,6 +123,7 @@
             <div style="align-self:flex-end"><button class="sm" id="applyBank">수금 반영</button></div>
           </div>
           <div class="muted" id="bankResult" style="margin-top:6px"></div>
+          <div class="muted" id="bankApplyInfo" style="margin-top:4px;color:var(--brand2)"></div>
         </div>
         <div>
           <label class="fld">📄 더빌 (청구액) — 선택</label>
@@ -131,6 +135,7 @@
             <div style="align-self:flex-end"><button class="sm sec" id="applyDeobil">청구 반영</button></div>
           </div>
           <div class="muted" id="deoResult" style="margin-top:6px"></div>
+          <div class="muted" id="deoApplyInfo" style="margin-top:4px;color:var(--brand2)"></div>
         </div>
       </div>
       <div id="unmatchBox" style="margin-top:10px"></div>
