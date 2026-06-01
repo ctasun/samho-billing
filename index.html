@@ -54,6 +54,7 @@
     <div class="tab" data-t="upload">② 입금 업로드</div>
     <div class="tab" data-t="perf">③ 담당자별 실적</div>
     <div class="tab" data-t="set">④ 설정·연동</div>
+    <div class="tab" data-t="admin">⑤ 관리자</div>
   </div>
 
   <!-- 수금관리 그리드 -->
@@ -177,6 +178,11 @@
       <div class="row"><div style="max-width:240px"><input id="cfgPw" type="password" placeholder="수정 암호"></div><button class="sec sm" id="savePw">암호 저장</button><span class="muted" id="pwMsg"></span></div>
     </div>
     <div class="card">
+      <b style="color:var(--brand)">관리자 암호 (⑤ 월정매출 열람)</b>
+      <p class="muted" style="margin:6px 0">설정하면 ⑤관리자 탭이 이 암호로 잠깁니다(수정 보호 암호와 별개). 빈칸이면 잠기지 않습니다. PC별 1회 등록.</p>
+      <div class="row"><div style="max-width:240px"><input id="cfgAdminPw" type="password" placeholder="관리자 암호"></div><button class="sec sm" id="saveAdminPw">암호 저장</button><span class="muted" id="adminPwMsg"></span></div>
+    </div>
+    <div class="card">
       <b style="color:var(--brand)">구글시트 실시간 연동</b>
       <ol class="muted" style="margin:6px 0 10px 18px;padding:0">
         <li>구글 스프레드시트 → <b>확장 프로그램 ▸ Apps Script</b></li>
@@ -208,6 +214,17 @@
       <div style="margin-top:8px"><button class="sec sm" id="saveMgr">담당자 저장</button></div>
     </div>
     <div class="card"><div class="note">⚠ 주민번호는 암호문으로만 저장(개인정보 보호법 제24조의2②). 공용 암호키 분실 시 복호화 불가. 실제 데이터는 깃허브에 올리지 마세요.</div></div>
+  </div>
+
+  <!-- 관리자 -->
+  <div id="admin" class="tabpane hidden">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <b style="color:var(--brand)">⑤ 관리자 — 월정매출</b>
+        <span class="muted">공급가액(VAT 제외) 기준 · 약정 발생 매출</span>
+      </div>
+      <div id="adminBody" style="margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
@@ -285,7 +302,7 @@ function nowStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 function renderMeta(){const m=S.meta||{};const b=document.getElementById('bankApplyInfo');if(b)b.textContent=m.bankApplyAt?('마지막 통장 반영: '+m.bankApplyAt):'';const d=document.getElementById('deoApplyInfo');if(d)d.textContent=m.deobilApplyAt?('마지막 더빌 반영: '+m.deobilApplyAt):'';const e=document.getElementById('manualInfo');if(e)e.textContent=m.manualAt?('🕐 최근 수기 입력: '+m.manualAt+(m.manualWho?(' · '+m.manualWho):'')):'';}
 async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r&&r.clients){S.clients=r.clients.map(c=>{['billed','collected','feeNet','feeGross','lastPayAmount'].forEach(k=>c[k]=num(c[k]));['payments','appliedPays','appliedBills'].forEach(k=>{if(typeof c[k]==='string'){try{c[k]=JSON.parse(c[k]||'[]');}catch(_){c[k]=[];}}if(!Array.isArray(c[k]))c[k]=[];});return c;});S.history=(r.history||[]).map(h=>({month:h.month,company:h.company,manager:h.manager,billed:num(h.billed),collected:num(h.collected)}));S.meta=r.meta||S.meta||{};Store.save();renderMeta();chip('☁ 연동됨 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));}}
 
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');if(t.dataset.t==='admin')renderAdmin();});
 document.getElementById('refreshBtn').onclick=async()=>{if(CONNECTED()){chip('불러오는 중...');await cloudLoad();renderHome();}};
 
 function readXlsx(file,cb){const fr=new FileReader();fr.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const hi=aoa.findIndex(r=>r.filter(c=>String(c).trim()!=='').length>=2);const headers=(aoa[hi]||[]).map((h,i)=>String(h).trim()||('열'+(i+1)));const rows=aoa.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]);return o;});cb({headers,rows,name:file.name});}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
@@ -461,6 +478,42 @@ document.getElementById('cashIssueBtn').onclick=async()=>{const sel=selectedPays
 /* 실적 */
 function renderPerf(){fillSel('perfView',['all'].concat(uniq(S.history.map(h=>h.manager).filter(Boolean))),v=>v==='all'?'전체 담당자':v);fillSel('perfMonth',[''].concat(uniq(S.history.map(h=>h.month)).sort().reverse()),v=>v||'전체 기간');const mgr=document.getElementById('perfView').value,mon=document.getElementById('perfMonth').value;const data=S.history.filter(h=>(mgr==='all'||h.manager===mgr)&&(!mon||h.month===mon));const agg={};data.forEach(h=>{const k=h.manager||'(미지정)';agg[k]=agg[k]||{b:0,c:0,n:0};agg[k].b+=num(h.billed);agg[k].c+=num(h.collected);agg[k].n++;});const max=Math.max(1,...Object.values(agg).map(a=>a.b||a.c));let h1='<thead><tr><th class="l">담당자</th><th>건수</th><th>매출(청구)</th><th>수금</th><th>수금률</th><th class="l">비중</th></tr></thead><tbody>';Object.entries(agg).sort((a,b)=>(b[1].b+b[1].c)-(a[1].b+a[1].c)).forEach(([k,v])=>h1+=`<tr><td class="l">${k}</td><td>${v.n}</td><td>${F(v.b)}</td><td>${F(v.c)}</td><td>${v.b?Math.round(v.c/v.b*100):0}%</td><td class="l"><div class="bar"><i style="width:${(v.b||v.c)/max*100}%"></i></div></td></tr>`);document.getElementById('perfTable').innerHTML=h1+'</tbody>';let h2='<thead><tr><th class="l">월</th><th class="l">업체</th><th class="l">담당자</th><th>매출</th><th>수금</th></tr></thead><tbody>';data.slice().reverse().forEach(h=>h2+=`<tr><td class="l">${h.month}</td><td class="l">${h.company}</td><td class="l">${h.manager}</td><td>${num(h.billed)?F(h.billed):''}</td><td>${num(h.collected)?F(h.collected):''}</td></tr>`);document.getElementById('perfDetail').innerHTML=h2+'</tbody>';}
 document.getElementById('perfView').onchange=renderPerf;document.getElementById('perfMonth').onchange=renderPerf;
+
+/* 관리자 — 월정매출 */
+function pad2(n){return String(n).padStart(2,'0');}
+function admPw(){return localStorage.getItem('samho_admin_pw')||'';}
+let ADMIN_UNLOCKED=0;
+function adminMonths(from,to){const out=[];if(!from||!to)return out;var a=from.split('-').map(Number),b=to.split('-').map(Number);var fy=a[0],fm=a[1],ty=b[0],tm=b[1];if(ty<fy||(ty===fy&&tm<fm))return out;var y=fy,m=fm;while(y<ty||(y===ty&&m<=tm)){out.push([y,m]);m++;if(m>12){m=1;y++;}}return out;}
+function renderAdmin(){var body=document.getElementById('adminBody');var locked=admPw()&&Date.now()>=ADMIN_UNLOCKED;
+  if(locked){body.innerHTML='<div style="max-width:340px;margin:10px auto;text-align:center;border:1px solid var(--line);border-radius:10px;padding:18px"><div style="font-size:13px;color:var(--sub);margin-bottom:8px">🔒 관리자 전용 · 월정매출</div><input id="admPwIn" type="password" placeholder="관리자 암호" style="max-width:200px;margin-bottom:8px"><div><button class="sm" id="admEnter">열람</button></div><div class="muted" id="admMsg" style="margin-top:6px"></div></div>';
+    var go=function(){var v=document.getElementById('admPwIn').value;if(v===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;renderAdmin();}else{document.getElementById('admMsg').textContent='암호가 일치하지 않습니다.';}};
+    document.getElementById('admEnter').onclick=go;document.getElementById('admPwIn').onkeydown=function(e){if(e.key==='Enter')go();};return;}
+  var now=new Date(),ey=now.getFullYear(),em=now.getMonth()+1;
+  var warn=admPw()?'':'<div class="note" style="margin-bottom:10px">⚠ 관리자 암호 미설정 — ④설정에서 지정하면 이 화면이 잠깁니다.</div>';
+  var unlockBar=admPw()?'<span style="font-size:11px;color:var(--ok);background:#e6f4ea;padding:3px 9px;border-radius:7px">🔓 열람중</span> <button class="sec sm" id="admLock">잠금</button> ':'';
+  body.innerHTML=warn+'<div class="row" style="align-items:flex-end">'+unlockBar+'<div style="max-width:150px"><label class="fld">시작월</label><input type="month" id="admFrom" value="'+ey+'-01"></div><div style="padding-bottom:8px">~</div><div style="max-width:150px"><label class="fld">종료월</label><input type="month" id="admTo" value="'+ey+'-'+pad2(em)+'"></div><button class="sm" id="admRun">조회</button></div><div id="admResult" style="margin-top:12px"></div>';
+  if(document.getElementById('admLock'))document.getElementById('admLock').onclick=function(){ADMIN_UNLOCKED=0;renderAdmin();};
+  document.getElementById('admRun').onclick=adminRun;adminRun();}
+function adminRun(){var from=document.getElementById('admFrom').value,to=document.getElementById('admTo').value;var months=adminMonths(from,to);
+  if(!months.length){document.getElementById('admResult').innerHTML='<div class="muted">기간을 올바르게 지정하세요.</div>';return;}
+  var byMgr={},monthly=months.map(function(){return 0;}),total=0,gjAmt=0,sdAmt=0,cliCnt=0;
+  S.clients.forEach(function(c){var feeN=num(c.feeNet)||Math.round((num(c.feeGross)||0)/1.1);if(!feeN)return;
+    var sd=c.gubun==='신대'&&Array.isArray(c.payMonths)&&c.payMonths.length;var occ=0;
+    months.forEach(function(ym,i){var m=ym[1];var hit=sd?c.payMonths.indexOf(m)>=0:true;if(hit){occ++;monthly[i]+=feeN;}});
+    if(occ<=0)return;var amt=occ*feeN;total+=amt;cliCnt++;if(c.gubun==='신대')sdAmt+=amt;else gjAmt+=amt;
+    var k=c.manager||'(미지정)';byMgr[k]=byMgr[k]||{n:0,occ:0,amt:0};byMgr[k].n++;byMgr[k].occ+=occ;byMgr[k].amt+=amt;});
+  var maxA=Math.max.apply(null,[1].concat(Object.keys(byMgr).map(function(k){return byMgr[k].amt;})));
+  var kpi='<div class="kpi" style="margin-bottom:12px"><div class="kbox"><div class="v">'+F(total)+'</div><div class="l">기간 월정매출</div></div><div class="kbox"><div class="v">'+cliCnt+'</div><div class="l">대상 거래처</div></div><div class="kbox"><div class="v">'+F(gjAmt)+'</div><div class="l">기장 합계</div></div><div class="kbox"><div class="v">'+F(sdAmt)+'</div><div class="l">신대 합계</div></div></div>';
+  var occSum=Object.keys(byMgr).reduce(function(s,k){return s+byMgr[k].occ;},0);
+  var t1='<b style="color:var(--brand)">담당자별 월정매출</b><div class="scroll" style="margin-top:8px"><table><thead><tr><th class="l">담당자</th><th>거래처</th><th>발생월수합</th><th>월정매출</th><th class="l">비중</th></tr></thead><tbody>';
+  Object.keys(byMgr).map(function(k){return [k,byMgr[k]];}).sort(function(a,b){return b[1].amt-a[1].amt;}).forEach(function(e){var k=e[0],v=e[1];t1+='<tr><td class="l">'+k+'</td><td>'+v.n+'</td><td>'+v.occ+'</td><td>'+F(v.amt)+'</td><td class="l"><div class="bar"><i style="width:'+(v.amt/maxA*100)+'%"></i></div></td></tr>';});
+  t1+='<tr style="font-weight:700"><td class="l">합계</td><td>'+cliCnt+'</td><td>'+occSum+'</td><td>'+F(total)+'</td><td></td></tr></tbody></table></div>';
+  var t2='<b style="color:var(--brand)">월별 추이</b><div class="scroll" style="margin-top:8px"><table><thead><tr><th class="l">월</th>'+months.map(function(ym){return '<th>'+ym[0]+'-'+pad2(ym[1])+'</th>';}).join('')+'</tr></thead><tbody><tr><td class="l">월정매출</td>'+monthly.map(function(v){return '<td>'+F(v)+'</td>';}).join('')+'</tr></tbody></table></div>';
+  document.getElementById('admResult').innerHTML=kpi+t1+'<div style="margin-top:14px"></div>'+t2;}
+document.getElementById('cfgAdminPw').value=localStorage.getItem('samho_admin_pw')||'';
+document.getElementById('saveAdminPw').onclick=function(){localStorage.setItem('samho_admin_pw',document.getElementById('cfgAdminPw').value);ADMIN_UNLOCKED=0;document.getElementById('adminPwMsg').textContent='저장됨';};
+
+/* 설정 */
 
 /* 설정 */
 const GAS=["function doGet(e){ var out=JSON.stringify(loadAll_()); var cb=e&&e.parameter&&e.parameter.callback; if(cb){ return ContentService.createTextOutput(cb+'('+out+')').setMimeType(ContentService.MimeType.JAVASCRIPT); } return ContentService.createTextOutput(out).setMimeType(ContentService.MimeType.JSON); }","function doPost(e){ var req=JSON.parse(e.postData.contents), a=req.action;","  if(a==='load') return out_(loadAll_());","  if(a==='saveClient'){ upsert_(req.client); return out_({ok:true}); }","  if(a==='deleteClient'){ del_(req.id); return out_({ok:true}); }","  if(a==='addHistory'){ addHist_(req.rows||[]); return out_({ok:true}); }","  if(a==='saveMeta'){ saveMeta_(req.meta||{}); return out_({ok:true}); }","  return out_({ok:false}); }","function out_(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }","var H=['id','name','ceo','bizno','ssn','tel','openDate','contractDate','email','bizType','bizItem','feeNet','feeGross','addr','calAddr','wht','note','manager','billed','collected','lastPayDate','lastPayAmount','payments','appliedPays','appliedBills','alias'];","var J=['payments','appliedPays','appliedBills'];","function sh_(n){ var s=SpreadsheetApp.getActiveSpreadsheet(), x=s.getSheetByName(n); if(!x)x=s.insertSheet(n); return x; }","function cs_(){ var s=sh_('clients'); if(s.getLastRow()===0)s.appendRow(H); return s; }","function loadAll_(){ var s=cs_(), v=s.getDataRange().getValues(), hd=v.shift();","  var clients=v.filter(function(r){return r[0]!=='';}).map(function(r){var o={};hd.forEach(function(h,i){o[h]=r[i];});J.forEach(function(k){try{o[k]=o[k]?JSON.parse(o[k]):[];}catch(e){o[k]=[];}});return o;});","  var hs=sh_('history'), hv=hs.getDataRange().getValues(), history=[];","  if(hv.length>1){var hh=hv.shift();history=hv.filter(function(r){return r[0]!=='';}).map(function(r){var o={};hh.forEach(function(h,i){o[h]=r[i];});return o;});}","  return {clients:clients, history:history, meta:loadMeta_()}; }","function row_(c){ return H.map(function(h){ return J.indexOf(h)>=0?JSON.stringify(c[h]||[]):(c[h]==null?'':c[h]); }); }","function upsert_(c){ var s=cs_(), ids=s.getRange(1,1,Math.max(s.getLastRow(),1),1).getValues().map(function(x){return x[0];}); var i=ids.indexOf(c.id), d=row_(c);","  if(i>0){ s.getRange(i+1,1,1,d.length).setValues([d]); } else { s.appendRow(d); } }","function del_(id){ var s=cs_(), ids=s.getRange(1,1,Math.max(s.getLastRow(),1),1).getValues().map(function(x){return x[0];}); var i=ids.indexOf(id); if(i>0)s.deleteRow(i+1); }","function addHist_(rows){ var s=sh_('history'); if(s.getLastRow()===0)s.appendRow(['month','company','manager','billed','collected']); rows.forEach(function(r){ s.appendRow([r.month,r.company,r.manager,r.billed,r.collected]); }); }","function metaSheet_(){ var s=sh_('meta'); if(s.getLastRow()===0)s.appendRow(['k','v']); return s; }","function loadMeta_(){ var s=metaSheet_(), v=s.getDataRange().getValues(); v.shift(); var o={}; v.forEach(function(r){ if(r[0]!=='')o[r[0]]=r[1]; }); return o; }","function saveMeta_(m){ var s=metaSheet_(), v=s.getDataRange().getValues(); v.shift(); var keys=v.map(function(r){return r[0];}); Object.keys(m).forEach(function(k){ var i=keys.indexOf(k); if(i>=0){ s.getRange(i+2,2).setValue(m[k]); } else { s.appendRow([k,m[k]]); keys.push(k); } }); }"].join("\n");
