@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 16:33';
+const BUILD_TIME='2026-06-01 16:42';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -331,6 +331,8 @@ function bindDrop(d,i,cb){const D=document.getElementById(d),I=document.getEleme
 function fillSel(id,arr,fn){const el=document.getElementById(id),cur=el.value;el.innerHTML=arr.map(v=>`<option value="${v}">${fn?fn(v):v}</option>`).join('');if(arr.includes(cur))el.value=cur;}
 function fillMgr(id,arr){const el=document.getElementById(id),cur=el.value,list=[''].concat(uniq(arr.filter(Boolean)));el.innerHTML=list.map(v=>`<option value="${v}">${v||'전체 담당자'}</option>`).join('');if(list.includes(cur))el.value=cur;}
 function colSel(id,headers,kw){const e=document.getElementById(id);const cur=headers.find(h=>kw.some(k=>h.replace(/\s/g,'').includes(k)))||'';e.innerHTML='<option value="">—</option>'+headers.map(h=>`<option value="${h}" ${h===cur?'selected':''}>${h}</option>`).join('');}
+function applyBankMap(headers){try{const m=JSON.parse(localStorage.getItem('samho_bank_map')||'null');if(!m)return;[['mPayer','payer'],['mAmount','amount'],['mDate','date']].forEach(p=>{if(m[p[1]]&&headers.indexOf(m[p[1]])>=0)document.getElementById(p[0]).value=m[p[1]];});}catch(e){}}
+function saveBankMap(){try{localStorage.setItem('samho_bank_map',JSON.stringify({payer:document.getElementById('mPayer').value,amount:document.getElementById('mAmount').value,date:document.getElementById('mDate').value}));}catch(e){}}
 
 /* ===== 수금대장 그리드 ===== */
 function yearsList(){const ys=uniq(S.clients.flatMap(c=>(c.payments||[]).map(pYear)).filter(Boolean));const cur=String(new Date().getFullYear());[cur,String(+cur-1),String(+cur+1)].forEach(y=>{if(!ys.includes(y))ys.push(y);});return ys.sort().reverse();}
@@ -466,7 +468,7 @@ document.getElementById('mDelete').onclick=()=>{if(!requireDelete())return;const
 
 /* 입금 업로드 (거래처 선등록 강제) */
 let rawBank=null,rawDeo=null;
-bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['거래기록','입금자','보낸','내용','적요','상대']);colSel('mAmount',d.headers,['입금금액','입금','금액']);colSel('mDate',d.headers,['거래일자','일자','날짜','거래일']);}));
+bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['거래기록','입금자','보낸','내용','적요','상대']);colSel('mAmount',d.headers,['입금금액','입금','금액']);colSel('mDate',d.headers,['거래일자','일자','날짜','거래일']);applyBankMap(d.headers);['mPayer','mAmount','mDate'].forEach(id=>document.getElementById(id).onchange=saveBankMap);}));
 bindDrop('dropDeobil','fileDeobil',f=>readXlsx(f,d=>{rawDeo=d;document.getElementById('dropDeobil').classList.add('has');document.getElementById('infoDeobil').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('deoSel').classList.remove('hidden');colSel('dName',d.headers,['회원명','거래처','상호','업체','회사']);colSel('dAmount',d.headers,['납부','금액','청구','보수','수수료']);colSel('dDate',d.headers,['출금일','입금일','일자','날짜']);colSel('dStatus',d.headers,['상태']);}));
 document.getElementById('applyBank').onclick=async()=>{await runBankApply();};
 async function runBankApply(){if(!requireWrite())return;if(!S.clients.length){alert('먼저 ①에서 거래처를 등록하세요.');return;}if(!rawBank){alert('통장 파일을 먼저 올리세요.');return;}const p=document.getElementById('mPayer').value,a=document.getElementById('mAmount').value,dt=document.getElementById('mDate').value;if(!p||!a){alert('입금자·입금액 열을 지정하세요.');return;}
