@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 16:03';
+const BUILD_TIME='2026-06-01 16:07';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -428,14 +428,23 @@ async function importClients(d){const map={};MF.forEach(f=>{const k=f[0];if(k===
 document.getElementById('expClients').onclick=()=>{const data=[MF.map(f=>f[1]).concat(['구분(기장/신대)','신대수금월(예 1,5,7)','청구시작연월(예 2024-03)','종료해지연월'])];S.clients.forEach(c=>data.push(MF.map(f=>f[0]==='ssn'?(c.ssn?'●●●●●●-●●●●●●●':''):(c[f[0]]??'')).concat([c.gubun||'기장',Array.isArray(c.payMonths)?c.payMonths.join(','):'',c.billStart||'',c.billEnd||''])));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'명단');XLSX.writeFile(wb,'거래처명단_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xls');};
 
 /* 모달 */
-let editIdx=-1;
+let editIdx=-1;let MODAL_GUBUN='기장';const SIMPLE_KEYS=['name','ceo','bizno','ssn'];
+function setModalGubun(g){MODAL_GUBUN=g;const sd=g==='신대';
+  const bGi=document.getElementById('mGiBtn'),bSd=document.getElementById('mSdBtn');
+  if(bGi){bGi.className='sm '+(sd?'sec':'');bGi.style.background=sd?'':'var(--brand)';bGi.style.color=sd?'':'#fff';}
+  if(bSd){bSd.className='sm '+(sd?'':'sec');bSd.style.background=sd?'var(--warn)':'';bSd.style.color=sd?'#fff':'';}
+  document.querySelectorAll('#mFields [data-k]').forEach(inp=>{const wrap=inp.closest('div');if(!wrap)return;wrap.style.display=(sd&&SIMPLE_KEYS.indexOf(inp.dataset.k)<0)?'none':'';});
+  const hint=document.getElementById('mSdHint');if(hint)hint.style.display=sd?'block':'none';
+  const billCard=document.querySelectorAll('#modal .card')[0];if(billCard)billCard.style.display=sd?'none':'';}
 async function openClient(idx){editIdx=idx;const c=idx>=0?S.clients[idx]:{};
   document.getElementById('mTitle').textContent=idx>=0?(c.name||'거래처 상세'):'신규 거래처 수임';
-  document.getElementById('mFields').innerHTML=MF.map(f=>`<div><label class="fld">${f[1]}</label><input data-k="${f[0]}" value="${f[0]==='ssn'?'':(c[f[0]]??'')}"></div>`).join('');
+  const tog='<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap"><span class="fld" style="margin:0">구분</span><span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden"><button type="button" id="mGiBtn" class="sm" style="border:none;border-radius:0">기장</button><button type="button" id="mSdBtn" class="sm sec" style="border:none;border-radius:0;border-left:1px solid var(--line)">신대</button></span><span id="mSdHint" class="muted" style="display:none;color:var(--warn)">신대 — 상호·대표자·식별번호만 입력(나머지는 저장 후 보완)</span></div>';
+  document.getElementById('mFields').innerHTML=tog+MF.map(f=>`<div><label class="fld">${f[1]}</label><input data-k="${f[0]}" value="${f[0]==='ssn'?'':(c[f[0]]??'')}"></div>`).join('');
+  document.getElementById('mGiBtn').onclick=()=>setModalGubun('기장');document.getElementById('mSdBtn').onclick=()=>setModalGubun('신대');
   const ssnEl=document.querySelector('#mFields [data-k="ssn"]');if(ssnEl)ssnEl.value=await decSsn(c.ssn);
   document.getElementById('mBilled').value=num(c.billed);document.getElementById('mCollected').value=F(collectedOf(c))+' 원';document.getElementById('mBalance').value=F(bal(c))+' 원';
   document.getElementById('mLastPay').value=c.lastPayDate?(c.lastPayDate+' · '+F(c.lastPayAmount)+'원'):'-';
-  renderPay(c);renderBillPeriod(c);document.getElementById('mDelete').style.display=idx>=0?'inline-block':'none';document.getElementById('overlay').style.display='flex';}
+  renderPay(c);renderBillPeriod(c);setModalGubun(c.gubun==='신대'?'신대':'기장');document.getElementById('mDelete').style.display=idx>=0?'inline-block':'none';document.getElementById('overlay').style.display='flex';}
 function feeRowHtml(from,gross){return '<tr><td class="c"><input type="month" class="fsFrom" value="'+(from||'')+'" style="width:140px"></td><td><input class="fsGross" value="'+(gross!=null&&gross!==''?F(gross):'')+'" style="text-align:right"></td><td class="c"><button class="x sm fsDel">×</button></td></tr>';}
 function bindFeeDel(){document.querySelectorAll('#mFeeSched .fsDel').forEach(b=>b.onclick=()=>{b.closest('tr').remove();});}
 function renderBillPeriod(c){document.getElementById('mBillStart').value=c.billStart||'';document.getElementById('mBillEnd').value=c.billEnd||'';const rows=(c.feeSchedule||[]).slice().sort((a,b)=>String(a.from).localeCompare(String(b.from)));document.getElementById('mFeeSched').innerHTML='<thead><tr><th class="c">시작연월</th><th>월정보수(VAT포함)</th><th class="c"></th></tr></thead><tbody>'+rows.map(r=>feeRowHtml(r.from,num(r.gross))).join('')+'</tbody>';bindFeeDel();}
@@ -452,7 +461,7 @@ document.getElementById('mSave').onclick=async()=>{if(!requireWrite())return;con
   const dup=dupClient(nameVal,biznoVal,isNew?null:c.id);if(dup){alert('이미 등록된 거래처입니다: '+dup.name+'\n(중복 등록이 차단되었습니다)');return;}
   if(ssnVal!==null){if(ssnVal===''){c.ssn='';}else if(ssnVal.startsWith('🔒')||ssnVal.startsWith('🔑')){}else{if(!CRYPTOKEY){alert('주민번호 저장하려면 ④설정에서 공용 암호키를 먼저 입력하세요.');return;}c.ssn=await encSsn(ssnVal);}}
   c.billStart=document.getElementById('mBillStart').value||'';c.billEnd=document.getElementById('mBillEnd').value||'';const sched=[];document.querySelectorAll('#mFeeSched tbody tr').forEach(tr=>{const from=tr.querySelector('.fsFrom').value;const gross=num(tr.querySelector('.fsGross').value);if(from&&gross)sched.push({from,gross});});sched.sort((a,b)=>String(a.from).localeCompare(String(b.from)));c.feeSchedule=sched;
-  c.billed=num(document.getElementById('mBilled').value);if(isNew)S.clients.push(c);Store.save();closeModal();renderHome();pushClient(c);};
+  c.gubun=MODAL_GUBUN;c.billed=num(document.getElementById('mBilled').value);if(isNew)S.clients.push(c);Store.save();closeModal();renderHome();pushClient(c);};
 document.getElementById('mDelete').onclick=()=>{if(!requireDelete())return;const c=S.clients[editIdx];S.clients.splice(editIdx,1);Store.save();closeModal();renderHome();pushDelete(c.id);};
 
 /* 입금 업로드 (거래처 선등록 강제) */
