@@ -584,6 +584,7 @@ function adminRun(){var from=document.getElementById('admFrom').value,to=documen
     var k=c.manager||'(미지정)';byMgr[k]=byMgr[k]||{n:0,occ:0,amt:0};byMgr[k].n++;byMgr[k].occ+=occ;byMgr[k].amt+=amt;});
   var kpi='<div class="kpi" style="margin-bottom:12px"><div class="kbox"><div class="v">'+F(total)+'</div><div class="l">기간 월정매출</div></div><div class="kbox"><div class="v">'+cliCnt+'</div><div class="l">대상 거래처</div></div><div class="kbox"><div class="v">'+F(gjAmt)+'</div><div class="l">기장 합계</div></div><div class="kbox"><div class="v">'+F(sdAmt)+'</div><div class="l">신대 합계</div></div></div>';
   var occSum=Object.keys(byMgr).reduce(function(s,k){return s+byMgr[k].occ;},0);
+  var maxA=Math.max(1,...Object.keys(byMgr).map(function(k){return byMgr[k].amt;}));
   var t1='<b style="color:var(--brand)">담당자별 월정매출</b><div class="scroll" style="margin-top:8px"><table><thead><tr><th class="l">담당자</th><th>거래처</th><th>발생월수합</th><th>월정매출</th><th class="l">비중</th></tr></thead><tbody>';
   Object.keys(byMgr).map(function(k){return [k,byMgr[k]];}).sort(function(a,b){return b[1].amt-a[1].amt;}).forEach(function(e){var k=e[0],v=e[1];t1+='<tr><td class="l">'+k+'</td><td>'+v.n+'</td><td>'+v.occ+'</td><td>'+F(v.amt)+'</td><td class="l"><div class="bar"><i style="width:'+(v.amt/maxA*100)+'%"></i></div></td></tr>';});
   t1+='<tr style="font-weight:700"><td class="l">합계</td><td>'+cliCnt+'</td><td>'+occSum+'</td><td>'+F(total)+'</td><td></td></tr></tbody></table></div>';
