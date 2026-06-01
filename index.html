@@ -33,7 +33,7 @@
   .pill{background:var(--chip);padding:3px 8px;border-radius:7px;font-size:12px;}
   .lnk{color:var(--brand2);font-weight:700;cursor:pointer;text-decoration:underline;}
   .hidden{display:none;}
-  .cell-ok{background:#eaf6ec;} .colh{cursor:pointer;} .colh:hover{background:#e3ecf5;}
+  .cell-ok{background:#eaf6ec;} .cell-tax{background:#e6f1fb;} .cell-cash{background:#eaf6ec;} .colh{cursor:pointer;} .colh:hover{background:#e3ecf5;}
   .add{color:#bbb;cursor:pointer;font-weight:700;}
   #overlay{position:fixed;inset:0;background:rgba(20,30,45,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
   #modal{background:#fff;border-radius:12px;max-width:780px;width:100%;max-height:92vh;overflow:auto;padding:18px;}
@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 15:29';
+const BUILD_TIME='2026-06-01 15:56';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -352,8 +352,8 @@ function renderHome(){
   list.forEach(c=>{const ci=S.clients.indexOf(c);
     let cells='';SLOTS.forEach(s=>{const ps=slotPays(c,s[0],Y);
       if(!ps.length){cells+=`<td class="c"><span class="add" data-addci="${ci}" data-slot="${s[0]}">＋</span></td>`;}
-      else{const allIss=ps.every(p=>p.issued);const sel=ps.some(p=>p._sel&&!p.issued);const d=fmtDate(ps[ps.length-1].date);const dd=d?d.slice(5).replace('-','/'):'●';const amt=ps.reduce((s2,p)=>s2+num(p.amount),0);
-        cells+=`<td class="c ${allIss?'cell-ok':''}" title="${d} · ${F(amt)}원${allIss?' · 발행완료':''}"><label style="cursor:pointer"><input type="checkbox" class="pchk" data-ci="${ci}" data-slot="${s[0]}" ${sel?'checked':''} ${allIss?'disabled':''} style="width:auto;vertical-align:middle"> ${allIss?'✓':''}${dd}</label></td>`;}});
+      else{const allIss=ps.every(p=>p.issued);const sel=ps.some(p=>p._sel&&!p.issued);const d=fmtDate(ps[ps.length-1].date);const dd=d?d.slice(5).replace('-','/'):'●';const amt=ps.reduce((s2,p)=>s2+num(p.amount),0);const iss=ps.filter(p=>p.issued);const itype=iss.length?iss[iss.length-1].issueType:'';const mk=allIss?(itype==='cash'?'✓현 ':(itype==='tax'?'✓세 ':'✓ ')):'';const cls=allIss?(itype==='cash'?'cell-cash':(itype==='tax'?'cell-tax':'cell-ok')):'';const tt=itype==='cash'?'현금영수증':(itype==='tax'?'세금계산서':'발행완료');
+        cells+=`<td class="c ${cls}" title="${d} · ${F(amt)}원${allIss?' · '+tt:''}"><label style="cursor:pointer"><input type="checkbox" class="pchk" data-ci="${ci}" data-slot="${s[0]}" ${sel?'checked':''} ${allIss?'disabled':''} style="width:auto;vertical-align:middle"> ${mk}${dd}</label></td>`;}});
     h+=`<tr><td class="c">${ci+1}</td><td class="c"><span data-gub="${ci}" style="cursor:pointer;font-weight:700;font-size:11px;color:${c.gubun==='신대'?'var(--warn)':'#888'}" title="클릭: 기장↔신대 전환">[${c.gubun||'기장'}]</span></td><td class="l"><span class="lnk" data-open="${ci}">${c.name||'(무명)'}</span></td><td class="l">${c.manager||''}</td><td class="c" style="${misuMonths(c,Y)>0?'color:var(--warn);font-weight:700':'color:#bbb'}">${misuMonths(c,Y)}</td><td>${F(num(c.feeGross)||num(c.feeNet))}</td>${cells}<td>${F((c.payments||[]).filter(p=>pYear(p)===Y).reduce((s2,p)=>s2+num(p.amount),0))}</td></tr>`;});
   document.getElementById('gridTable').innerHTML=h+'</tbody>';
   const gj=S.clients.filter(c=>c.gubun!=='신대');
@@ -402,7 +402,7 @@ document.getElementById('issueBtn').onclick=async()=>{const sel=selectedPays();i
   const issueDate=document.getElementById('gIssueDate').value;if(!issueDate){alert('작성일자를 입력하세요.');return;}
   if(!confirm(sel.length+'건을 '+issueDate+' 작성일자로 발행할까요?'))return;
   const tpl=TPL||DEFAULT_TPL;const cols=tpl.cols||(tpl.headers?tpl.headers.length:tpl.map.length);const aoa=tpl.top?tpl.top.map(r=>r.slice()):[tpl.headers.slice()];const changed=[];
-  for(const r of sel){const ssnPlain=await decSsn(r.c.ssn);const x={c:r.c,p:r.p,supply:supplyOf(r.c,r.p),tax:taxOf(r.c,r.p),issueDate,ssnPlain};const row=new Array(cols).fill('');tpl.map.forEach((f,ci)=>{if(f)row[ci]=resolveF(f,x);});aoa.push(row);r.p.issued=true;r.p.issueDate=issueDate;r.p.supply=x.supply;r.p.tax=x.tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
+  for(const r of sel){const ssnPlain=await decSsn(r.c.ssn);const x={c:r.c,p:r.p,supply:supplyOf(r.c,r.p),tax:taxOf(r.c,r.p),issueDate,ssnPlain};const row=new Array(cols).fill('');tpl.map.forEach((f,ci)=>{if(f)row[ci]=resolveF(f,x);});aoa.push(row);r.p.issued=true;r.p.issueType='tax';r.p.issueDate=issueDate;r.p.supply=x.supply;r.p.tax=x.tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'세금계산서');XLSX.writeFile(wb,'세무법인삼호 남부지점 세금계산서 발행_'+issueDate.replace(/-/g,'')+'.xls');
   Store.save();renderHome();if(CONNECTED()){for(const c of changed)await pushClient(c);chip('☁ 발행상태 동기화');}};
 
@@ -505,7 +505,7 @@ document.getElementById('cashIssueBtn').onclick=async()=>{const sel=selectedPays
   for(const r of sel){const total=Math.round(num(r.p.amount));const tax=Math.floor(total*10/110);const supply=total-tax;
     let id19=r.c.bizno?String(r.c.bizno):await decSsn(r.c.ssn);id19=String(id19).replace(/[^0-9\-]/g,'');
     rows.push([r.c.bizno?'1':'0',id19,String(total),String(supply),String(tax),'']);
-    r.p.issued=true;r.p.issueDate=today;r.p.supply=supply;r.p.tax=tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
+    r.p.issued=true;r.p.issueType='cash';r.p.issueDate=today;r.p.supply=supply;r.p.tax=tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
   XLSX.utils.sheet_add_aoa(ws,rows,{origin:'A7'});
   XLSX.writeFile(wb,'세무법인삼호 남부지점 현금영수증 발행_'+today.replace(/-/g,'')+'.xlsx');
   Store.save();renderHome();if(CONNECTED()){for(const c of changed)await pushClient(c);chip('☁ 발행상태 동기화');}};
