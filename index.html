@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 16:07';
+const BUILD_TIME='2026-06-01 16:12';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -466,7 +466,7 @@ document.getElementById('mDelete').onclick=()=>{if(!requireDelete())return;const
 
 /* 입금 업로드 (거래처 선등록 강제) */
 let rawBank=null,rawDeo=null;
-bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['입금자','보낸','내용','적요','상대','거래']);colSel('mAmount',d.headers,['입금','금액']);colSel('mDate',d.headers,['일자','날짜','거래일']);}));
+bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['거래기록','입금자','보낸','내용','적요','상대']);colSel('mAmount',d.headers,['입금금액','입금','금액']);colSel('mDate',d.headers,['거래일자','일자','날짜','거래일']);}));
 bindDrop('dropDeobil','fileDeobil',f=>readXlsx(f,d=>{rawDeo=d;document.getElementById('dropDeobil').classList.add('has');document.getElementById('infoDeobil').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('deoSel').classList.remove('hidden');colSel('dName',d.headers,['회원명','거래처','상호','업체','회사']);colSel('dAmount',d.headers,['납부','금액','청구','보수','수수료']);colSel('dDate',d.headers,['출금일','입금일','일자','날짜']);colSel('dStatus',d.headers,['상태']);}));
 document.getElementById('applyBank').onclick=async()=>{await runBankApply();};
 async function runBankApply(){if(!requireWrite())return;if(!S.clients.length){alert('먼저 ①에서 거래처를 등록하세요.');return;}if(!rawBank){alert('통장 파일을 먼저 올리세요.');return;}const p=document.getElementById('mPayer').value,a=document.getElementById('mAmount').value,dt=document.getElementById('mDate').value;if(!p||!a){alert('입금자·입금액 열을 지정하세요.');return;}
