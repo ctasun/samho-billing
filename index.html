@@ -218,6 +218,7 @@
         <button class="sec sm" id="backupExport">⬇ 로컬 백업</button>
         <button class="gho sm" id="backupImportBtn">⬆ 복원</button>
         <input type="file" id="backupImport" accept=".json" class="hidden">
+        <button class="x sm" id="clearPays">입금내역 전체 비우기</button>
         <button class="x sm" id="resetAll">로컬 초기화</button>
       </div>
       <label class="fld" style="margin-top:10px">담당자 목록 (쉼표 구분)</label>
@@ -661,6 +662,7 @@ document.getElementById('saveMgr').onclick=()=>{S.managers=document.getElementBy
 document.getElementById('backupExport').onclick=()=>{const cl=JSON.parse(JSON.stringify(S));cl.clients.forEach(c=>{delete c._sel;(c.payments||[]).forEach(p=>delete p._sel);});const b=new Blob([JSON.stringify(cl,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='삼호백업_'+new Date().toISOString().slice(0,10)+'.json';a.click();};
 document.getElementById('backupImportBtn').onclick=()=>document.getElementById('backupImport').click();
 document.getElementById('backupImport').onchange=e=>{const fr=new FileReader();fr.onload=ev=>{try{mem=JSON.parse(ev.target.result);S=mem;Store.save();alert('복원 완료');location.reload();}catch(x){alert('복원 실패');}};fr.readAsText(e.target.files[0]);};
+document.getElementById('clearPays').onclick=async()=>{if(!requireAdmin())return;var n=S.clients.reduce(function(s,c){return s+((c.payments||[]).length);},0);if(!confirm('모든 거래처의 입금내역 '+n+'건을 비웁니다. 거래처 명단·월보수는 그대로 유지됩니다. 계속할까요?'))return;if(prompt('확인을 위해 "비우기" 라고 입력하세요')!=='비우기'){alert('취소되었습니다.');return;}var changed=[];S.clients.forEach(function(c){if((c.payments&&c.payments.length)||(c.appliedPays&&c.appliedPays.length)){c.payments=[];c.appliedPays=[];c.lastPayDate='';c.lastPayAmount=0;changed.push(c);}});Store.save();renderHome();if(CONNECTED()){chip('☁ 비우는 중...');for(const c of changed)await pushClient(c);chip('☁ 동기화 완료');}alert('입금내역을 모두 비웠습니다. ②에서 더빌·은행을 다시 올리세요.');};
 document.getElementById('resetAll').onclick=()=>{if(!requireDelete())return;if(confirm('로컬 데이터를 삭제할까요?(클라우드 시트는 유지)')){mem=def();S=mem;Store.save();location.reload();}};
 
 tplStatus();reflectLock();setInterval(reflectLock,1000);
