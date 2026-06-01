@@ -391,7 +391,7 @@ document.getElementById('impFile').onchange=e=>{if(e.target.files[0])readXlsx(e.
 async function importClients(d){const map={};MF.forEach(f=>{const k=f[0];if(k==='ceo')map[k]=d.headers.find(h=>h.includes('대표자')&&!h.includes('주민'))||'';else if(k==='feeGross')map[k]=d.headers.find(h=>h.includes('보수')&&!h.includes('제외'))||'';else map[k]=d.headers.find(h=>(IMPG[k]||[]).some(x=>h.replace(/\s/g,'').includes(x)))||'';});
   if(d.rows.some(r=>map.ssn&&String(r[map.ssn]||'').trim())&&!CRYPTOKEY){alert('주민번호를 가져오려면 ④설정에서 공용 암호키를 먼저 입력하세요.');return;}
   let add=0,upd=0;const touched=[];
-  for(const r of d.rows){const o={};for(const f of MF){const col=map[f[0]];if(!col)continue;let v=r[col];c[k]=['feeNet','feeGross','finalTaxFee','etcFee'].includes(k)?num(i.value):i.value;else if(['openDate','contractDate'].includes(f[0]))v=fmtDate(v);else if(f[0]==='ssn'){v=String(v||'').trim();v=v?await encSsn(v):'';}else v=String(v||'').trim();o[f[0]]=v;}
+  for(const r of d.rows){const o={};for(const f of MF){const col=map[f[0]];if(!col)continue;let v=r[col];if(['feeNet','feeGross','finalTaxFee','etcFee'].includes(f[0]))v=num(v);else if(['openDate','contractDate'].includes(f[0]))v=fmtDate(v);else if(f[0]==='ssn'){v=String(v||'').trim();v=v?await encSsn(v):'';}else v=String(v||'').trim();o[f[0]]=v;}
     if(!o.name)continue;let ex=dupClient(o.name,o.bizno,null);
     if(ex){Object.assign(ex,o);upd++;touched.push(ex);}else{const nc=Object.assign({id:newId(),billed:0,payments:[],appliedPays:[],appliedBills:[]},o);S.clients.push(nc);add++;touched.push(nc);}}
   Store.save();renderHome();if(CONNECTED()){chip('☁ 올리는 중...');for(const c of touched)await pushClient(c);chip('☁ 동기화 완료');}alert(`불러오기 완료 — 신규 ${add} · 갱신 ${upd}`);}
@@ -414,7 +414,7 @@ document.getElementById('mClose').onclick=closeModal;document.getElementById('mC
 document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
 document.getElementById('mBilled').oninput=()=>{document.getElementById('mBalance').value=F(num(document.getElementById('mBilled').value)-num(String(document.getElementById('mCollected').value)))+' 원';};
 document.getElementById('mSave').onclick=async()=>{if(!requireWrite())return;const isNew=editIdx<0;const c=isNew?{id:newId(),payments:[],appliedPays:[],appliedBills:[]}:S.clients[editIdx];
-  let ssnVal=null,nameVal='',biznoVal='';document.querySelectorAll('#mFields input').forEach(i=>{const k=i.dataset.k;if(k==='ssn')ssnVal=i.value;else{c[k]=['feeNet','feeGross','finalTaxFee','etcFee'].includes(k)?num(i.value):i.value;if(k==='name')nameVal=i.value;if(k==='bizno')biznoVal=i.value;}});
+  let ssnVal=null,nameVal='',biznoVal='';document.querySelectorAll('#mFields input').forEach(i=>{const k=i.dataset.k;if(k==='ssn')ssnVal=i.value;else{if(['feeNet','feeGross','finalTaxFee','etcFee'].includes(f[0]))v=num(v);if(k==='name')nameVal=i.value;if(k==='bizno')biznoVal=i.value;}});
   const dup=dupClient(nameVal,biznoVal,isNew?null:c.id);if(dup){alert('이미 등록된 거래처입니다: '+dup.name+'\n(중복 등록이 차단되었습니다)');return;}
   if(ssnVal!==null){if(ssnVal===''){c.ssn='';}else if(ssnVal.startsWith('🔒')||ssnVal.startsWith('🔑')){}else{if(!CRYPTOKEY){alert('주민번호 저장하려면 ④설정에서 공용 암호키를 먼저 입력하세요.');return;}c.ssn=await encSsn(ssnVal);}}
   c.billed=num(document.getElementById('mBilled').value);if(isNew)S.clients.push(c);Store.save();closeModal();renderHome();pushClient(c);};
