@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 14:19';
+const BUILD_TIME='2026-06-01 15:08';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -336,6 +336,7 @@ function renderHome(){
   reflectLock();
   fillMgr('hMgr',S.clients.map(c=>c.manager));
   fillSel('gYear',yearsList());
+  var _gy=document.getElementById('gYear');var _cy=String(new Date().getFullYear());if(!_gy.dataset.userpick&&[..._gy.options].some(o=>o.value===_cy))_gy.value=_cy;
   if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
   const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
@@ -379,7 +380,8 @@ function applyColSort(list,Y){if(!SORT.key)return list;const key=SORT.key,dir=SO
 function closeColMenu(){const m=document.getElementById('colMenu');if(m)m.remove();}
 function openColMenu(th,key,baseList,Y){closeColMenu();const vals=uniq(baseList.map(c=>colFiltVal(c,key,Y))).sort((a,b)=>String(a).localeCompare(String(b),'ko'));const cur=(FILTERS[key]&&FILTERS[key].length)?FILTERS[key]:vals.slice();const r=th.getBoundingClientRect();const m=document.createElement('div');m.id='colMenu';m.style.cssText='position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:8px;min-width:180px;font-size:12px;max-height:340px;overflow:auto';m.style.left=Math.min(r.left,window.innerWidth-200)+'px';m.style.top=(r.bottom+2)+'px';m.innerHTML='<div style="display:flex;gap:6px;margin-bottom:6px"><button class="sm sec" data-sort="asc" style="flex:1">▲ 오름</button><button class="sm sec" data-sort="desc" style="flex:1">▼ 내림</button></div><div style="border-top:1px solid var(--line);padding-top:6px"><label style="display:block;padding:2px 0"><input type="checkbox" id="cmAll" '+(!(FILTERS[key]&&FILTERS[key].length)?'checked':'')+' style="width:auto;vertical-align:middle"> (전체)</label>'+vals.map(v=>'<label style="display:block;padding:2px 0"><input type="checkbox" class="cmV" value="'+encodeURIComponent(v)+'" '+(cur.indexOf(v)>=0?'checked':'')+' style="width:auto;vertical-align:middle"> '+(v||'(빈값)')+'</label>').join('')+'</div><div style="display:flex;gap:6px;margin-top:8px"><button class="sm" data-act="apply" style="flex:1">적용</button><button class="sm sec" data-act="clear" style="flex:1">해제</button></div>';document.body.appendChild(m);m.querySelector('[data-sort="asc"]').onclick=()=>{SORT={key:key,dir:1};closeColMenu();renderHome();};m.querySelector('[data-sort="desc"]').onclick=()=>{SORT={key:key,dir:-1};closeColMenu();renderHome();};m.querySelector('#cmAll').onclick=e=>{m.querySelectorAll('.cmV').forEach(x=>x.checked=e.target.checked);};m.querySelector('[data-act="apply"]').onclick=()=>{const picked=[...m.querySelectorAll('.cmV')].filter(x=>x.checked).map(x=>decodeURIComponent(x.value));if(picked.length===0||picked.length===vals.length){delete FILTERS[key];}else{FILTERS[key]=picked;}closeColMenu();renderHome();};m.querySelector('[data-act="clear"]').onclick=()=>{delete FILTERS[key];SORT={key:'',dir:1};closeColMenu();renderHome();};}
 document.addEventListener('mousedown',e=>{const m=document.getElementById('colMenu');if(m&&!m.contains(e.target)&&!e.target.closest('.hfilt'))closeColMenu();});
-['hSearch','hMgr','gYear'].forEach(id=>document.getElementById(id).oninput=renderHome);
+['hSearch','hMgr'].forEach(id=>document.getElementById(id).oninput=renderHome);
+document.getElementById('gYear').onchange=function(){document.getElementById('gYear').dataset.userpick='1';renderHome();};
 document.getElementById('lockBtn').onclick=()=>{if(!pw()){alert('④설정에서 수정 암호를 설정하면 보호가 켜집니다.');return;}if(Date.now()<UNLOCKED){UNLOCKED=0;reflectLock();}else{alert('추가·수정은 암호 입력 후 3분간 유지됩니다. 삭제는 매번 암호를 묻습니다.');}};
 function addPayCell(ci,slot){if(!requireWrite())return;const c=S.clients[ci];const Y=curYear();
   const defDate=/^\d+$/.test(slot)?(Y+'-'+String(slot).padStart(2,'0')+'-01'):(Y+'-'+(slot==='확정신고'?'05-31':new Date().toISOString().slice(5,10)));
