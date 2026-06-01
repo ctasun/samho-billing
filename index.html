@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 14:45';
+const BUILD_TIME='2026-06-01 15:29';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -322,7 +322,11 @@ async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');if(t.dataset.t==='admin')renderAdmin();});
 document.getElementById('refreshBtn').onclick=async()=>{if(CONNECTED()){chip('불러오는 중...');await cloudLoad();renderHome();}};
 
-function readXlsx(file,cb){const fr=new FileReader();fr.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const hi=aoa.findIndex(r=>r.filter(c=>String(c).trim()!=='').length>=2);const headers=(aoa[hi]||[]).map((h,i)=>String(h).trim()||('열'+(i+1)));const rows=aoa.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]);return o;});cb({headers,rows,name:file.name});}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
+function readXlsx(file,cb){const fr=new FileReader();fr.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const HKW=['거래일자','거래일','입금금액','출금금액','거래후잔액','잔액','거래내용','거래기록사항','거래점','거래시간','이체메모','입금자','보낸분','적요','상호','거래처','대표자','사업자','주민','연락처','담당','업태','종목','보수','회원명','납부','청구','상태','출금일','입금일'];
+function _hScore(r){var s=0;(r||[]).forEach(function(c){var t=String(c).replace(/\s/g,'');if(!t)return;HKW.forEach(function(k){if(t.indexOf(k)>=0)s++;});});return s;}
+let hi=-1,_hBest=0;aoa.forEach(function(r,i){var sc=_hScore(r);if(sc>_hBest){_hBest=sc;hi=i;}});
+if(hi<0)hi=aoa.findIndex(r=>r.filter(c=>String(c).trim()!=='').length>=2);
+if(hi<0)hi=0;const headers=(aoa[hi]||[]).map((h,i)=>String(h).trim()||('열'+(i+1)));const rows=aoa.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]);return o;});cb({headers,rows,name:file.name});}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
 function bindDrop(d,i,cb){const D=document.getElementById(d),I=document.getElementById(i);D.onclick=()=>I.click();D.ondragover=e=>e.preventDefault();D.ondrop=e=>{e.preventDefault();if(e.dataTransfer.files[0])cb(e.dataTransfer.files[0]);};I.onchange=e=>{if(e.target.files[0])cb(e.target.files[0]);};}
 function fillSel(id,arr,fn){const el=document.getElementById(id),cur=el.value;el.innerHTML=arr.map(v=>`<option value="${v}">${fn?fn(v):v}</option>`).join('');if(arr.includes(cur))el.value=cur;}
 function fillMgr(id,arr){const el=document.getElementById(id),cur=el.value,list=[''].concat(uniq(arr.filter(Boolean)));el.innerHTML=list.map(v=>`<option value="${v}">${v||'전체 담당자'}</option>`).join('');if(list.includes(cur))el.value=cur;}
