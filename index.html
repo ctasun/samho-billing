@@ -261,7 +261,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 15:08';
+const BUILD_TIME='2026-06-01 14:45';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -562,6 +562,6 @@ document.getElementById('backupImport').onchange=e=>{const fr=new FileReader();f
 document.getElementById('resetAll').onclick=()=>{if(!requireDelete())return;if(confirm('로컬 데이터를 삭제할까요?(클라우드 시트는 유지)')){mem=def();S=mem;Store.save();location.reload();}};
 
 tplStatus();reflectLock();setInterval(reflectLock,1000);
-(async function(){const k=localStorage.getItem('samho_key')||'';if(k){try{await setupKey(k);}catch(e){}}if(CONNECTED()){chip('☁ 불러오는 중...');try{await cloudLoad();}catch(e){chip('⚠ 연동 실패(로컬)');}}renderHome();})();
+(async function(){var _hs=document.getElementById('hSearch');if(_hs){_hs.value='';_hs.setAttribute('name','q_'+Date.now());_hs.setAttribute('autocomplete','off');}const k=localStorage.getItem('samho_key')||'';if(k){try{await setupKey(k);}catch(e){}}if(CONNECTED()){chip('☁ 불러오는 중...');try{await cloudLoad();}catch(e){chip('⚠ 연동 실패(로컬)');}}renderHome();})();
 </script>
 </div>
