@@ -61,35 +61,39 @@
   <div id="home" class="tabpane">
     <div class="card">
       <div class="row">
-        <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:200px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-        <select id="hMgr" style="max-width:140px"></select>
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
-          <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none">전체</button>
-          <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line)">기장</button>
-          <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line)">신대</button>
-        </span>
-        <div style="max-width:110px"><label class="fld">연도</label><select id="gYear"></select></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-right:10px;border-right:1px solid var(--line)">
+          <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:180px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <select id="hMgr" style="max-width:130px"></select>
+          <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
+            <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none">전체</button>
+            <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line)">기장</button>
+            <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line)">신대</button>
+          </span>
+          <span class="muted">연도</span>
+          <select id="gYear" style="max-width:90px"></select>
+        </div>
+        <span style="flex:1"></span>
         <button class="sm" id="lockBtn">🔒 잠김</button>
-        <div style="flex:1"></div>
+        <button class="sec" id="extendBtn" style="display:none">⏱ 3분 연장</button>
         <button id="newClient">＋ 수임</button>
-        <button class="sec sm" id="impBtn">⬆ 명단</button>
+        <button class="sec" id="impBtn">⬆ 명단 가져오기</button>
         <input type="file" id="impFile" accept=".xls,.xlsx" class="hidden">
-        <button class="dl sm" id="expClients">⬇ 내보내기</button>
+        <button class="dl" id="expClients">⬇ 명단 내보내기</button>
       </div>
       <div class="row" style="margin-top:6px">
         <span class="muted" id="manualInfo"></span>
       </div>
       <div class="row" style="margin-top:8px">
-        <span class="muted">⚠ 미수 필터</span>
+        <span class="muted">⚠ 미수</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
           <button type="button" class="msf sm sec" data-msf="" style="border-radius:0;border:none">전체</button>
           <button type="button" class="msf sm sec" data-msf="1" style="border-radius:0;border:none;border-left:1px solid var(--line)">1개월</button>
           <button type="button" class="msf sm sec" data-msf="2" style="border-radius:0;border:none;border-left:1px solid var(--line)">2개월</button>
           <button type="button" class="msf sm sec" data-msf="3" style="border-radius:0;border:none;border-left:1px solid var(--line)">3개월↑</button>
         </span>
+        <span style="width:1px;height:20px;background:var(--line)"></span>
+        <button type="button" class="sm sec" id="unverBtn">⚠ 미확인 입금만</button>
         <span class="muted" style="color:#aaa">· 선택 연도 기준</span>
-        <span style="flex:1"></span>
-        <button type="button" class="sm sec" id="unverBtn">⚠ 미확인만</button>
       </div>
       <div class="row" style="margin-top:8px">
         <div style="max-width:160px"><label class="fld">작성일자(발행일)</label><input type="date" id="gIssueDate"></div>
@@ -278,7 +282,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 21:37';
+const BUILD_TIME='2026-06-01 22:56';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -318,7 +322,7 @@ const pw=()=>localStorage.getItem('samho_pw')||'';
 function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireAdmin(){if(!admPw())return true;if(Date.now()<ADMIN_UNLOCKED)return true;const x=prompt('관리자 암호를 입력하세요');if(x===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;return true;}if(x!==null)alert('관리자 암호가 일치하지 않습니다.');return false;}
-function reflectLock(){const b=document.getElementById('lockBtn');if(!pw()){b.textContent='🔓 보호 없음';b.className='sm sec';}else if(Date.now()<UNLOCKED){const s=Math.max(0,Math.round((UNLOCKED-Date.now())/1000));b.textContent='🔓 해제중 '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' (눌러 잠금)';b.className='sm lockoff';}else{b.textContent='🔒 수정 시 암호';b.className='sm lockon';}}
+function reflectLock(){const b=document.getElementById('lockBtn');const ex=document.getElementById('extendBtn');let on=false;if(!pw()){b.textContent='🔓 보호 없음';b.className='sec';}else if(Date.now()<UNLOCKED){const s=Math.max(0,Math.round((UNLOCKED-Date.now())/1000));b.textContent='🔓 해제중 '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' (눌러 잠금)';b.className='lockoff';on=true;}else{b.textContent='🔒 수정 시 암호';b.className='lockon';}if(ex)ex.style.display=on?'inline-block':'none';}
 
 /* 암호화 */
 let CRYPTOKEY=null;
@@ -416,6 +420,7 @@ document.addEventListener('mousedown',e=>{const m=document.getElementById('colMe
 ['hSearch','hMgr'].forEach(id=>document.getElementById(id).oninput=renderHome);
 document.getElementById('gYear').onchange=function(){document.getElementById('gYear').dataset.userpick='1';renderHome();};
 document.getElementById('lockBtn').onclick=()=>{if(!pw()){alert('④설정에서 수정 암호를 설정하면 보호가 켜집니다.');return;}if(Date.now()<UNLOCKED){UNLOCKED=0;reflectLock();}else{alert('추가·수정은 암호 입력 후 3분간 유지됩니다. 삭제는 매번 암호를 묻습니다.');}};
+document.getElementById('extendBtn').onclick=()=>{if(Date.now()<UNLOCKED){UNLOCKED=Date.now()+HOLD;reflectLock();}};
 function addPayCell(ci,slot){if(!requireAdmin())return;const c=S.clients[ci];const Y=curYear();
   const defDate=/^\d+$/.test(slot)?(Y+'-'+String(slot).padStart(2,'0')+'-01'):(Y+'-'+(slot==='확정신고'?'05-31':new Date().toISOString().slice(5,10)));
   const date=prompt('입금일 (YYYY-MM-DD)',defDate);if(!date)return;const amount=num(prompt('입금액',num(c.feeGross)||''));if(!amount)return;
