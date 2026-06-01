@@ -259,9 +259,16 @@
   </div>
 </div></div>
 
+<div id="cellOverlay" style="position:fixed;inset:0;background:rgba(20,30,45,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:14px">
+  <div id="cellModal" style="background:#fff;border-radius:12px;max-width:440px;width:100%;max-height:90vh;overflow:auto;padding:18px">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0;font-size:15px;color:var(--brand)">입금 분류 · 관리 <span style="font-size:11px;color:var(--bad);background:#fbe9eb;padding:2px 7px;border-radius:7px">🔒 관리자</span></h2><button class="sec sm" id="cellClose">닫기 ✕</button></div>
+    <div id="cellBody" style="margin-top:10px"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 16:42';
+const BUILD_TIME='2026-06-01 17:34';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -558,14 +565,7 @@ function admPw(){return localStorage.getItem('samho_admin_pw')||'';}
 let ADMIN_UNLOCKED=0;
 function adminMonths(from,to){const out=[];if(!from||!to)return out;var a=from.split('-').map(Number),b=to.split('-').map(Number);var fy=a[0],fm=a[1],ty=b[0],tm=b[1];if(ty<fy||(ty===fy&&tm<fm))return out;var y=fy,m=fm;while(y<ty||(y===ty&&m<=tm)){out.push([y,m]);m++;if(m>12){m=1;y++;}}return out;}
 function renderAdmin(){var body=document.getElementById('adminBody');var locked=admPw()&&Date.now()>=ADMIN_UNLOCKED;
-  if(locked){body.innerHTML='<div style="max-width:340px;margin:10px auto;text-align:center;border:1px solid var(--line);border-radius:10px;padding:18px"><div style="font-size:13px;color:var(--sub);margin-bottom:8px">🔒 관리자 전용 · 월정매출</div><input id="admPwIn" type="password" placeholder="관리자 암호" style="max-width:200px;margin-bottom:8px"><div><button class="sm" id="admEnter">열람</button></div><div class="muted" id="admMsg" style="margin-top:6px"></div></div>
-
-<div id="cellOverlay" style="position:fixed;inset:0;background:rgba(20,30,45,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:14px">
-  <div id="cellModal" style="background:#fff;border-radius:12px;max-width:440px;width:100%;max-height:90vh;overflow:auto;padding:18px">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0;font-size:15px;color:var(--brand)">입금 분류 · 관리 <span style="font-size:11px;color:var(--bad);background:#fbe9eb;padding:2px 7px;border-radius:7px">🔒 관리자</span></h2><button class="sec sm" id="cellClose">닫기 ✕</button></div>
-    <div id="cellBody" style="margin-top:10px"></div>
-  </div>
-</div>';
+  if(locked){body.innerHTML='<div style="max-width:340px;margin:10px auto;text-align:center;border:1px solid var(--line);border-radius:10px;padding:18px"><div style="font-size:13px;color:var(--sub);margin-bottom:8px">🔒 관리자 전용 · 월정매출</div><input id="admPwIn" type="password" placeholder="관리자 암호" style="max-width:200px;margin-bottom:8px"><div><button class="sm" id="admEnter">열람</button></div><div class="muted" id="admMsg" style="margin-top:6px"></div></div>';
     var go=function(){var v=document.getElementById('admPwIn').value;if(v===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;renderAdmin();}else{document.getElementById('admMsg').textContent='암호가 일치하지 않습니다.';}};
     document.getElementById('admEnter').onclick=go;document.getElementById('admPwIn').onkeydown=function(e){if(e.key==='Enter')go();};return;}
   var now=new Date(),ey=now.getFullYear(),em=now.getMonth()+1;
