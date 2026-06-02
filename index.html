@@ -92,7 +92,7 @@
         </span>
         <span style="width:1px;height:20px;background:var(--line)"></span>
         <button type="button" class="sm sec" id="unverBtn">⚠ 미확인 입금만</button>
-        <span class="muted" style="color:#aaa">· 선택 연도 기준</span>
+        <span class="muted" style="color:#aaa">· 이번 달까지 기준</span>
       </div>
       <div class="row" style="margin-top:8px">
         <div style="max-width:160px"><label class="fld">작성일자(발행일)</label><input type="date" id="gIssueDate"></div>
@@ -281,7 +281,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-01 23:05';
+const BUILD_TIME='2026-06-01 23:13';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
