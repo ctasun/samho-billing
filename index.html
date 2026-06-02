@@ -279,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 15:20';
+const BUILD_TIME='2026-06-02 15:46';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -659,10 +659,10 @@ document.getElementById('cfgUrl').value=localStorage.getItem('samho_url')||'';do
 document.getElementById('saveCfg').onclick=async()=>{localStorage.setItem('samho_url',document.getElementById('cfgUrl').value.trim());const k=document.getElementById('cfgKey').value;localStorage.setItem('samho_key',k);if(k)await setupKey(k);document.getElementById('connMsg').textContent='저장됨. "불러오기"로 동기화하세요.';chip(CONNECTED()?'☁ 연동 설정됨':'로컬 모드');};
 document.getElementById('testConn').onclick=async()=>{const m=document.getElementById('connMsg');m.textContent='테스트 중...';try{const r=await jsonpLoad();m.textContent='✅ 연결 성공 (거래처 '+(r.clients?r.clients.length:0)+'건)';}catch(e){m.textContent='❌ 실패 — URL/배포권한(모든 사용자) 확인';}};
 document.getElementById('cloudPull').onclick=async()=>{const m=document.getElementById('connMsg');try{m.textContent='불러오는 중...';await cloudLoad();renderHome();m.textContent='✅ 완료';}catch(e){m.textContent='❌ 실패';}};
-document.getElementById('cloudPushAll').onclick=async()=>{if(!CONNECTED()){alert('먼저 URL 저장');return;}if(!confirm('현재 PC 데이터를 클라우드로 올릴까요?'))return;const m=document.getElementById('connMsg');m.textContent='올리는 중...';for(const c of S.clients)await pushClient(c);await pushHistory(S.history);m.textContent='✅ 전체 업로드 완료';};
+document.getElementById('cloudPushAll').onclick=async()=>{if(!requireAdmin())return;if(!CONNECTED()){alert('먼저 URL 저장');return;}if(!confirm('현재 PC 데이터를 클라우드로 올릴까요?'))return;const m=document.getElementById('connMsg');m.textContent='올리는 중...';for(const c of S.clients)await pushClient(c);await pushHistory(S.history);m.textContent='✅ 전체 업로드 완료';};
 document.getElementById('saveMgr').onclick=()=>{S.managers=document.getElementById('mgrList').value.split(',').map(s=>s.trim()).filter(Boolean);Store.save();};
-document.getElementById('backupExport').onclick=()=>{const cl=JSON.parse(JSON.stringify(S));cl.clients.forEach(c=>{delete c._sel;(c.payments||[]).forEach(p=>delete p._sel);});const b=new Blob([JSON.stringify(cl,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='삼호백업_'+new Date().toISOString().slice(0,10)+'.json';a.click();};
-document.getElementById('backupImportBtn').onclick=()=>document.getElementById('backupImport').click();
+document.getElementById('backupExport').onclick=()=>{if(!requireAdmin())return;const cl=JSON.parse(JSON.stringify(S));cl.clients.forEach(c=>{delete c._sel;(c.payments||[]).forEach(p=>delete p._sel);});const b=new Blob([JSON.stringify(cl,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='삼호백업_'+new Date().toISOString().slice(0,10)+'.json';a.click();};
+document.getElementById('backupImportBtn').onclick=()=>{if(!requireAdmin())return;document.getElementById('backupImport').click();};
 document.getElementById('backupImport').onchange=e=>{const fr=new FileReader();fr.onload=ev=>{try{mem=JSON.parse(ev.target.result);S=mem;Store.save();alert('복원 완료');location.reload();}catch(x){alert('복원 실패');}};fr.readAsText(e.target.files[0]);};
 document.getElementById('clearPays').onclick=async()=>{if(!requireAdmin())return;var n=S.clients.reduce(function(s,c){return s+((c.payments||[]).length);},0);if(!confirm('모든 거래처의 입금내역 '+n+'건을 비웁니다. 거래처 명단·월보수는 그대로 유지됩니다. 계속할까요?'))return;if(prompt('확인을 위해 "비우기" 라고 입력하세요')!=='비우기'){alert('취소되었습니다.');return;}var changed=[];S.clients.forEach(function(c){if((c.payments&&c.payments.length)||(c.appliedPays&&c.appliedPays.length)){c.payments=[];c.appliedPays=[];c.lastPayDate='';c.lastPayAmount=0;changed.push(c);}});Store.save();renderHome();if(CONNECTED()){chip('☁ 비우는 중...');for(const c of changed)await pushClient(c);chip('☁ 동기화 완료');}alert('입금내역을 모두 비웠습니다. ②에서 더빌·은행을 다시 올리세요.');};
 document.getElementById('resetAll').onclick=()=>{if(!requireDelete())return;if(confirm('로컬 데이터를 삭제할까요?(클라우드 시트는 유지)')){mem=def();S=mem;Store.save();location.reload();}};
