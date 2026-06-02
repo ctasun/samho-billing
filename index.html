@@ -63,12 +63,12 @@
       <div class="row">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;padding-right:10px;border-right:1px solid var(--line)">
           <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:180px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <select id="hMgr" style="max-width:130px"></select>
-          <select id="gYear" style="max-width:90px"></select>
-          <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
-            <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none">전체</button>
-            <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line)">기장</button>
-            <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line)">신대</button>
+          <select id="hMgr" style="max-width:130px;flex-shrink:0"></select>
+          <select id="gYear" style="max-width:90px;flex-shrink:0"></select>
+          <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex-shrink:0;white-space:nowrap">
+            <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none;white-space:nowrap">전체</button>
+            <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line);white-space:nowrap">기장</button>
+            <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line);white-space:nowrap">신대</button>
           </span>
         </div>
         <span style="flex:1"></span>
@@ -279,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 10:22';
+const BUILD_TIME='2026-06-02 10:27';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
