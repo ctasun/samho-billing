@@ -191,10 +191,11 @@
       <p class="muted" style="margin:6px 0">설정하면 수기 입력·추가는 잠금 해제(암호) 후에만, 삭제는 매번 암호를 요구합니다. 빈칸이면 보호 없음.</p>
       <div class="row"><div style="max-width:240px"><input id="cfgPw" type="password" placeholder="수정 암호"></div><button class="sec sm" id="savePw">암호 저장</button><span class="muted" id="pwMsg"></span></div>
     </div>
-    <div class="card">
-      <b style="color:var(--brand)">관리자 암호 (⑤ 월정매출 열람)</b>
-      <p class="muted" style="margin:6px 0">설정하면 ⑤관리자 탭이 이 암호로 잠깁니다(수정 보호 암호와 별개). 빈칸이면 잠기지 않습니다. PC별 1회 등록.</p>
-      <div class="row"><div style="max-width:240px"><input id="cfgAdminPw" type="password" placeholder="관리자 암호"></div><button class="sec sm" id="saveAdminPw">암호 저장</button><span class="muted" id="adminPwMsg"></span></div>
+    <div class="card" id="adminPwCard">
+      <b style="color:var(--brand)">관리자 암호 (⑤ 월정매출 열람·수기입력)</b>
+      <p class="muted" style="margin:6px 0">설정하면 ⑤관리자 탭·수기입력이 이 암호로 잠깁니다(수정 보호 암호와 별개). 이 암호는 구글시트에 저장되어 모든 PC에 동일 적용됩니다. 한 번 설정하면 입력란이 숨겨지며, 변경은 구글시트 meta 시트에서 합니다.</p>
+      <div class="row" id="adminPwRow"><div style="max-width:240px"><input id="cfgAdminPw" type="password" placeholder="관리자 암호"></div><button class="sec sm" id="saveAdminPw">암호 저장(시트)</button><span class="muted" id="adminPwMsg"></span></div>
+      <div class="muted" id="adminPwSet" style="display:none;color:var(--ok)">✓ 관리자 암호가 설정되어 있습니다(모든 PC 적용). 변경은 구글시트 meta 시트에서 합니다.</div>
     </div>
     <div class="card">
       <b style="color:var(--brand)">구글시트 실시간 연동</b>
@@ -281,7 +282,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 09:12';
+const BUILD_TIME='2026-06-02 09:32';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -320,7 +321,7 @@ function me(){return (localStorage.getItem('samho_me')||'').trim();}
 const pw=()=>localStorage.getItem('samho_pw')||'';
 function requireWrite(){if(!pw())return true;if(Date.now()<UNLOCKED)return true;const x=prompt('수정 암호를 입력하세요');if(x===pw()){UNLOCKED=Date.now()+HOLD;reflectLock();return true;}if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
 function requireDelete(){if(!pw())return true;const x=prompt('삭제하려면 암호를 입력하세요');if(x===pw())return true;if(x!==null)alert('암호가 일치하지 않습니다.');return false;}
-function requireAdmin(){if(!admPw())return true;if(Date.now()<ADMIN_UNLOCKED)return true;const x=prompt('관리자 암호를 입력하세요');if(x===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;return true;}if(x!==null)alert('관리자 암호가 일치하지 않습니다.');return false;}
+function requireAdmin(){if(!admPw()){alert('관리자 암호가 설정되지 않았습니다. ④설정·연동에서 먼저 등록하세요.');return false;}if(Date.now()<ADMIN_UNLOCKED)return true;const x=prompt('관리자 암호를 입력하세요');if(x===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;return true;}if(x!==null)alert('관리자 암호가 일치하지 않습니다.');return false;}
 function reflectLock(){const b=document.getElementById('lockBtn');const ex=document.getElementById('extendBtn');let on=false;if(!pw()){b.textContent='🔓 보호 없음';b.className='sec';}else if(Date.now()<UNLOCKED){const s=Math.max(0,Math.round((UNLOCKED-Date.now())/1000));b.textContent='🔓 해제중 '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+' (눌러 잠금)';b.className='lockoff';on=true;}else{b.textContent='🔒 수정 시 암호';b.className='lockon';}if(ex)ex.style.display=on?'inline-block':'none';}
 
 /* 암호화 */
@@ -344,7 +345,7 @@ function nowStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 function renderMeta(){const m=S.meta||{};const b=document.getElementById('bankApplyInfo');if(b)b.textContent=m.bankApplyAt?('마지막 통장 반영: '+m.bankApplyAt):'';const d=document.getElementById('deoApplyInfo');if(d)d.textContent=m.deobilApplyAt?('마지막 더빌 반영: '+m.deobilApplyAt):'';const e=document.getElementById('manualInfo');if(e)e.textContent=m.manualAt?('🕐 최근 수기 입력: '+m.manualAt+(m.manualWho?(' · '+m.manualWho):'')):'';}
 async function cloudLoad(){if(!CONNECTED())return;const r=await jsonpLoad();if(r&&r.clients){S.clients=r.clients.map(c=>{['billed','collected','feeNet','feeGross','lastPayAmount'].forEach(k=>c[k]=num(c[k]));['payments','appliedPays','appliedBills','feeSchedule'].forEach(k=>{if(typeof c[k]==='string'){try{c[k]=JSON.parse(c[k]||'[]');}catch(_){c[k]=[];}}if(!Array.isArray(c[k]))c[k]=[];});return c;});S.history=(r.history||[]).map(h=>({month:h.month,company:h.company,manager:h.manager,billed:num(h.billed),collected:num(h.collected)}));S.meta=r.meta||S.meta||{};Store.save();renderMeta();chip('☁ 연동됨 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));}}
 
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set')document.getElementById('mgrList').value=S.managers.join(', ');if(t.dataset.t==='admin')renderAdmin();});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tabpane').forEach(x=>x.classList.add('hidden'));t.classList.add('active');document.getElementById(t.dataset.t).classList.remove('hidden');if(t.dataset.t==='home')renderHome();if(t.dataset.t==='perf')renderPerf();if(t.dataset.t==='set'){document.getElementById('mgrList').value=S.managers.join(', ');renderAdminPwCard();}if(t.dataset.t==='admin')renderAdmin();});
 document.getElementById('refreshBtn').onclick=async()=>{if(CONNECTED()){chip('불러오는 중...');await cloudLoad();renderHome();}};
 
 function readXlsx(file,cb){const fr=new FileReader();fr.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const HKW=['거래일자','거래일','입금금액','출금금액','거래후잔액','잔액','거래내용','거래기록사항','거래점','거래시간','이체메모','입금자','보낸분','적요','상호','거래처','대표자','사업자','주민','연락처','담당','업태','종목','보수','회원명','납부','청구','상태','출금일','입금일'];
@@ -616,10 +617,10 @@ document.getElementById('perfView').onchange=renderPerf;document.getElementById(
 
 /* 관리자 — 월정매출 */
 function pad2(n){return String(n).padStart(2,'0');}
-function admPw(){return localStorage.getItem('samho_admin_pw')||'';}
+function admPw(){return (S.meta&&S.meta.adminPw)?String(S.meta.adminPw):'';}
 let ADMIN_UNLOCKED=0;
 function adminMonths(from,to){const out=[];if(!from||!to)return out;var a=from.split('-').map(Number),b=to.split('-').map(Number);var fy=a[0],fm=a[1],ty=b[0],tm=b[1];if(ty<fy||(ty===fy&&tm<fm))return out;var y=fy,m=fm;while(y<ty||(y===ty&&m<=tm)){out.push([y,m]);m++;if(m>12){m=1;y++;}}return out;}
-function renderAdmin(){var body=document.getElementById('adminBody');var locked=admPw()&&Date.now()>=ADMIN_UNLOCKED;
+function renderAdmin(){var body=document.getElementById('adminBody');if(!admPw()){body.innerHTML='<div class="note">⚠ 관리자 암호가 설정되지 않았습니다. ④설정·연동에서 관리자 암호를 등록하면 월정매출을 열람할 수 있습니다.</div>';return;}var locked=Date.now()>=ADMIN_UNLOCKED;
   if(locked){body.innerHTML='<div style="max-width:340px;margin:10px auto;text-align:center;border:1px solid var(--line);border-radius:10px;padding:18px"><div style="font-size:13px;color:var(--sub);margin-bottom:8px">🔒 관리자 전용 · 월정매출</div><input id="admPwIn" type="password" placeholder="관리자 암호" style="max-width:200px;margin-bottom:8px"><div><button class="sm" id="admEnter">열람</button></div><div class="muted" id="admMsg" style="margin-top:6px"></div></div>';
     var go=function(){var v=document.getElementById('admPwIn').value;if(v===admPw()){ADMIN_UNLOCKED=Date.now()+HOLD;renderAdmin();}else{document.getElementById('admMsg').textContent='암호가 일치하지 않습니다.';}};
     document.getElementById('admEnter').onclick=go;document.getElementById('admPwIn').onkeydown=function(e){if(e.key==='Enter')go();};return;}
@@ -645,9 +646,9 @@ function adminRun(){var from=document.getElementById('admFrom').value,to=documen
   t1+='<tr style="font-weight:700"><td class="l">합계</td><td>'+cliCnt+'</td><td>'+occSum+'</td><td>'+F(total)+'</td><td></td></tr></tbody></table></div>';
   var t2='<b style="color:var(--brand)">월별 추이</b><div class="scroll" style="margin-top:8px"><table><thead><tr><th class="l">월</th>'+months.map(function(ym){return '<th>'+ym[0]+'-'+pad2(ym[1])+'</th>';}).join('')+'</tr></thead><tbody><tr><td class="l">월정매출</td>'+monthly.map(function(v){return '<td>'+F(v)+'</td>';}).join('')+'</tr></tbody></table></div>';
   document.getElementById('admResult').innerHTML=kpi+t1+'<div style="margin-top:14px"></div>'+t2;}
-document.getElementById('cfgAdminPw').value=localStorage.getItem('samho_admin_pw')||'';
-document.getElementById('saveAdminPw').onclick=function(){localStorage.setItem('samho_admin_pw',document.getElementById('cfgAdminPw').value);ADMIN_UNLOCKED=0;document.getElementById('adminPwMsg').textContent='저장됨';};
-
+function renderAdminPwCard(){var row=document.getElementById('adminPwRow');var setMsg=document.getElementById('adminPwSet');if(!row)return;var has=!!admPw();row.style.display=has?'none':'';if(setMsg)setMsg.style.display=has?'block':'none';}
+document.getElementById('cfgAdminPw').value='';
+document.getElementById('saveAdminPw').onclick=async function(){var v=document.getElementById('cfgAdminPw').value.trim();S.meta=S.meta||{};S.meta.adminPw=v;Store.save();ADMIN_UNLOCKED=0;if(CONNECTED()){document.getElementById('adminPwMsg').textContent='시트에 저장 중...';try{await pushMeta();document.getElementById('adminPwMsg').textContent='시트에 저장됨(모든 PC 적용)';}catch(e){document.getElementById('adminPwMsg').textContent='시트 저장 실패 — 연동을 확인하세요';}}else{document.getElementById('adminPwMsg').textContent='저장됨(로컬 — 연동 후 전 PC 적용)';}renderAdminPwCard();};
 /* 설정 */
 
 /* 설정 */
