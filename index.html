@@ -279,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 10:27';
+const BUILD_TIME='2026-06-02 15:20';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -354,7 +354,7 @@ function bindDrop(d,i,cb){const D=document.getElementById(d),I=document.getEleme
 function fillSel(id,arr,fn){const el=document.getElementById(id),cur=el.value;el.innerHTML=arr.map(v=>`<option value="${v}">${fn?fn(v):v}</option>`).join('');if(arr.includes(cur))el.value=cur;}
 function fillMgr(id,arr){const el=document.getElementById(id),cur=el.value,list=[''].concat(uniq(arr.filter(Boolean)));el.innerHTML=list.map(v=>`<option value="${v}">${v||'전체 담당자'}</option>`).join('');if(list.includes(cur))el.value=cur;}
 function colSel(id,headers,kw){const e=document.getElementById(id);const cur=headers.find(h=>kw.some(k=>h.replace(/\s/g,'').includes(k)))||'';e.innerHTML='<option value="">—</option>'+headers.map(h=>`<option value="${h}" ${h===cur?'selected':''}>${h}</option>`).join('');}
-function applyBankMap(headers){try{const m=JSON.parse(localStorage.getItem('samho_bank_map')||'null');if(!m)return;[['mPayer','payer'],['mAmount','amount'],['mDate','date']].forEach(p=>{if(m[p[1]]&&headers.indexOf(m[p[1]])>=0)document.getElementById(p[0]).value=m[p[1]];});}catch(e){}}
+function applyBankMap(headers){try{const m=JSON.parse(localStorage.getItem('samho_bank_map')||'null');if(!m)return;const pick=v=>{if(!v)return'';if(headers.indexOf(v)>=0)return v;const nv=String(v).replace(/\s/g,'');return headers.find(h=>{const nh=String(h).replace(/\s/g,'');return nh&&(nh===nv||nh.includes(nv)||nv.includes(nh));})||'';};[['mPayer','payer'],['mAmount','amount'],['mDate','date']].forEach(p=>{const f=pick(m[p[1]]);if(f)document.getElementById(p[0]).value=f;});}catch(e){}}
 function saveBankMap(){try{localStorage.setItem('samho_bank_map',JSON.stringify({payer:document.getElementById('mPayer').value,amount:document.getElementById('mAmount').value,date:document.getElementById('mDate').value}));}catch(e){}}
 
 /* ===== 수금대장 그리드 ===== */
