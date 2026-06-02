@@ -75,9 +75,9 @@
         <button class="sm" id="lockBtn">🔒 잠김</button>
         <button class="sec" id="extendBtn" style="display:none">⏱ 3분 연장</button>
         <button id="newClient">＋ 수임</button>
-        <button class="sec" id="impBtn" style="line-height:1.15;padding:4px 10px;font-size:11px">⬆ 명단<br>가져오기</button>
+        <button class="sec" id="impBtn" style="line-height:1.15;padding:4px 10px;font-size:11px">⬆ 명단<br>업로드</button>
         <input type="file" id="impFile" accept=".xls,.xlsx" class="hidden">
-        <button class="dl" id="expClients" style="line-height:1.15;padding:4px 10px;font-size:11px">⬇ 명단<br>내보내기</button>
+        <button class="dl" id="expClients" style="line-height:1.15;padding:4px 10px;font-size:11px">⬇ 명단<br>다운로드</button>
       </div>
       <div class="row" style="margin-top:6px">
         <span class="muted" id="manualInfo"></span>
@@ -279,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 16:01';
+const BUILD_TIME='2026-06-02 16:36';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
