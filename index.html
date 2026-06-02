@@ -64,12 +64,12 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-right:10px;border-right:1px solid var(--line)">
           <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:180px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <select id="hMgr" style="max-width:130px"></select>
+          <select id="gYear" style="max-width:90px"></select>
           <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
             <button type="button" class="gbf sm sec" data-gbf="" style="border-radius:0;border:none">전체</button>
             <button type="button" class="gbf sm sec" data-gbf="기장" style="border-radius:0;border:none;border-left:1px solid var(--line)">기장</button>
             <button type="button" class="gbf sm sec" data-gbf="신대" style="border-radius:0;border:none;border-left:1px solid var(--line)">신대</button>
           </span>
-          <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><span class="muted">연도</span><select id="gYear" style="max-width:90px"></select></span>
         </div>
         <span style="flex:1"></span>
         <button class="sm" id="lockBtn">🔒 잠김</button>
@@ -282,7 +282,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 09:39';
+const BUILD_TIME='2026-06-02 09:49';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -367,7 +367,7 @@ function slotPays(c,slot,Y){return (c.payments||[]).filter(p=>pYear(p)===Y&&pSlo
 function renderHome(){
   reflectLock();
   fillMgr('hMgr',S.clients.map(c=>c.manager));
-  fillSel('gYear',yearsList());
+  fillSel('gYear',yearsList(),function(y){return y+'년';});
   var _gy=document.getElementById('gYear');var _cy=String(new Date().getFullYear());if(!_gy.dataset.userpick&&[..._gy.options].some(o=>o.value===_cy))_gy.value=_cy;
   if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
