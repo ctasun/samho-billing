@@ -61,7 +61,7 @@
   <div id="home" class="tabpane">
     <div class="card">
       <div class="row">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-right:10px;border-right:1px solid var(--line)">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;padding-right:10px;border-right:1px solid var(--line)">
           <input id="hSearch" placeholder="🔍 상호/담당자" style="max-width:180px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <select id="hMgr" style="max-width:130px"></select>
           <select id="gYear" style="max-width:90px"></select>
@@ -282,7 +282,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 10:03';
+const BUILD_TIME='2026-06-02 10:10';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
