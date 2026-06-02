@@ -282,7 +282,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 09:32';
+const BUILD_TIME='2026-06-02 09:39';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -648,7 +648,7 @@ function adminRun(){var from=document.getElementById('admFrom').value,to=documen
   document.getElementById('admResult').innerHTML=kpi+t1+'<div style="margin-top:14px"></div>'+t2;}
 function renderAdminPwCard(){var row=document.getElementById('adminPwRow');var setMsg=document.getElementById('adminPwSet');if(!row)return;var has=!!admPw();row.style.display=has?'none':'';if(setMsg)setMsg.style.display=has?'block':'none';}
 document.getElementById('cfgAdminPw').value='';
-document.getElementById('saveAdminPw').onclick=async function(){var v=document.getElementById('cfgAdminPw').value.trim();S.meta=S.meta||{};S.meta.adminPw=v;Store.save();ADMIN_UNLOCKED=0;if(CONNECTED()){document.getElementById('adminPwMsg').textContent='시트에 저장 중...';try{await pushMeta();document.getElementById('adminPwMsg').textContent='시트에 저장됨(모든 PC 적용)';}catch(e){document.getElementById('adminPwMsg').textContent='시트 저장 실패 — 연동을 확인하세요';}}else{document.getElementById('adminPwMsg').textContent='저장됨(로컬 — 연동 후 전 PC 적용)';}renderAdminPwCard();};
+document.getElementById('saveAdminPw').onclick=async function(){var v=document.getElementById('cfgAdminPw').value.trim();if(!v){document.getElementById('adminPwMsg').textContent='암호를 입력하세요.';return;}S.meta=S.meta||{};S.meta.adminPw=v;Store.save();ADMIN_UNLOCKED=0;if(CONNECTED()){document.getElementById('adminPwMsg').textContent='시트에 저장 중...';try{await pushMeta();document.getElementById('adminPwMsg').textContent='시트에 저장됨(모든 PC 적용)';}catch(e){document.getElementById('adminPwMsg').textContent='시트 저장 실패 — 연동을 확인하세요';}}else{document.getElementById('adminPwMsg').textContent='저장됨(로컬 — 연동 후 전 PC 적용)';}renderAdminPwCard();};
 /* 설정 */
 
 /* 설정 */
