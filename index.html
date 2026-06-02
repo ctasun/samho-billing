@@ -82,24 +82,21 @@
       <div class="row" style="margin-top:6px">
         <span class="muted" id="manualInfo"></span>
       </div>
-      <div class="row" style="margin-top:8px">
-        <span class="muted">⚠ 미수</span>
+      <div class="row" style="margin-top:8px;align-items:flex-end">
+        <span class="muted" style="padding-bottom:6px">⚠ 미수</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden">
           <button type="button" class="msf sm sec" data-msf="" style="border-radius:0;border:none">전체</button>
           <button type="button" class="msf sm sec" data-msf="1" style="border-radius:0;border:none;border-left:1px solid var(--line)">1개월</button>
           <button type="button" class="msf sm sec" data-msf="2" style="border-radius:0;border:none;border-left:1px solid var(--line)">2개월</button>
           <button type="button" class="msf sm sec" data-msf="3" style="border-radius:0;border:none;border-left:1px solid var(--line)">3개월↑</button>
         </span>
-        <span style="width:1px;height:20px;background:var(--line)"></span>
+        <span style="width:1px;height:20px;background:var(--line);margin-bottom:5px"></span>
         <button type="button" class="sm sec" id="unverBtn">⚠ 미확인 입금만</button>
-        <span class="muted" style="color:#aaa">· 이번 달까지 기준</span>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <div style="max-width:160px"><label class="fld">작성일자(발행일)</label><input type="date" id="gIssueDate"></div>
-        <span class="muted">선택 <b id="selCnt">0</b>건 · 공급가액 <b id="selSupply">0</b> · 합계 <b id="selTotal">0</b></span>
         <div style="flex:1"></div>
-        <button class="dl" id="issueBtn">🧾 세금계산서 발행</button>
-        <button id="cashIssueBtn">🧾 현금영수증 발행</button>
+        <span class="muted" style="padding-bottom:6px">선택 <b id="selCnt">0</b>건 · 공급가액 <b id="selSupply">0</b> · 합계 <b id="selTotal">0</b></span>
+        <div style="max-width:160px"><label class="fld">작성일자(발행일)</label><input type="date" id="gIssueDate"></div>
+        <button class="dl" id="issueBtn" style="line-height:1.15;padding:4px 11px;font-size:11px">🧾 세금계산서<br>발행</button>
+        <button id="cashIssueBtn" style="line-height:1.15;padding:4px 11px;font-size:11px">🧾 현금영수증<br>발행</button>
       </div>
       <div class="kpi" style="margin:10px 0">
         <div class="kbox"><div class="v" id="kClients">0</div><div class="l">거래처수</div></div>
@@ -282,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-02 10:10';
+const BUILD_TIME='2026-06-02 10:22';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
