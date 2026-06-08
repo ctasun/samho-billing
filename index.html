@@ -279,7 +279,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-08 10:08';
+const BUILD_TIME='2026-06-08 11:24';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -510,7 +510,7 @@ async function importClients(d){const map={};MF.forEach(f=>{const k=f[0];if(k===
     if(billEndCol){const be=String(r[billEndCol]||'').trim();if(be)o.billEnd=be.slice(0,7);}
     if(!o.name)continue;let ex=dupClient(o.name,o.bizno,null);
     if(ex){Object.assign(ex,o);upd++;touched.push(ex);}else{const nc=Object.assign({id:newId(),billed:0,payments:[],appliedPays:[],appliedBills:[]},o);S.clients.push(nc);add++;touched.push(nc);}}
-  Store.save();renderHome();if(CONNECTED()){chip('☁ 올리는 중...');for(const c of touched)await pushClient(c);chip('☁ 동기화 완료');}alert(`불러오기 완료 — 신규 ${add} · 갱신 ${upd}`);}
+  Store.save();renderHome();if(CONNECTED()){let _ti=0;for(const c of touched){await pushClient(c);_ti++;chip('☁ 명단 올리는 중 '+_ti+'/'+touched.length);}chip('☁ 동기화 완료');}alert(`불러오기 완료 — 신규 ${add} · 갱신 ${upd}`);}
 document.getElementById('expClients').onclick=()=>{const data=[MF.map(f=>f[1]).concat(['구분(기장/신대)','신대수금월(예 1,5,7)','청구시작연월(예 2024-03)','종료해지연월'])];S.clients.forEach(c=>data.push(MF.map(f=>f[0]==='ssn'?(c.ssn?'●●●●●●-●●●●●●●':''):(c[f[0]]??'')).concat([c.gubun||'기장',Array.isArray(c.payMonths)?c.payMonths.join(','):'',c.billStart||'',c.billEnd||''])));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'명단');XLSX.writeFile(wb,'거래처명단_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xls');};
 
 /* 모달 */
