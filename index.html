@@ -285,7 +285,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-08 20:34';
+const BUILD_TIME='2026-06-08 19:17';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -310,7 +310,7 @@ function pYear(p){return p.year?String(p.year):(p.date?String(p.date).slice(0,4)
 function pSlot(p){return p.slot||(p.date?String(parseInt(String(p.date).slice(5,7),10)||''):'');}
 function ymStr(Y,m){return String(Y)+'-'+String(m).padStart(2,'0');}
 function inBillPeriod(c,Y,m){var ym=ymStr(Y,m);if(c.billStart&&ym<c.billStart)return false;if(c.billEnd&&ym>c.billEnd)return false;return true;}
-function feeGrossAt(c,Y,m){if(c.gubun==='신대'){if(Array.isArray(c.billSchedule)&&c.billSchedule.length){return c.billSchedule.filter(function(r){return num(r.month)===m;}).reduce(function(s,r){return s+num(r.amount);},0);}return 0;}var base=num(c.feeGross)||Math.round(num(c.feeNet)*1.1);var sched=c.feeSchedule;if(Array.isArray(sched)&&sched.length){var ym=ymStr(Y,m),pick=null;sched.slice().sort(function(a,b){return String(a.from).localeCompare(String(b.from));}).forEach(function(r){if(String(r.from)<=ym)pick=r;});if(pick)return num(pick.gross);}return base;}
+function feeGrossAt(c,Y,m){if(c.gubun==='신대'){if(Array.isArray(c.billSchedule)&&c.billSchedule.length){return Math.round(c.billSchedule.filter(function(r){return num(r.month)===m;}).reduce(function(s,r){return s+num(r.amount);},0));}return 0;}var base=num(c.feeGross)||Math.round(num(c.feeNet)*1.1);var sched=c.feeSchedule;if(Array.isArray(sched)&&sched.length){var ym=ymStr(Y,m),pick=null;sched.slice().sort(function(a,b){return String(a.from).localeCompare(String(b.from));}).forEach(function(r){if(String(r.from)<=ym)pick=r;});if(pick)return Math.round(num(pick.gross));}return Math.round(base);}
 function isBlockedSlot(c,Y,slot){if(!/^\d+$/.test(slot))return false;var m=parseInt(slot,10);if(c.gubun==='신대'){var pm=Array.isArray(c.payMonths)?c.payMonths:[];return pm.indexOf(m)<0;}return !inBillPeriod(c,Y,m);}
 function misuMonths(c,Y){const now=new Date();const curY=now.getFullYear();const curM=now.getMonth()+1;const yNum=parseInt(Y,10);const upto=(yNum<curY)?12:(yNum>curY?0:curM);if(upto<1)return 0;let due;if(c.gubun==='신대'&&Array.isArray(c.payMonths)&&c.payMonths.length){due=c.payMonths.filter(m=>m>=1&&m<=upto);}else{due=[];for(let m=1;m<=upto;m++)due.push(m);}due=due.filter(m=>inBillPeriod(c,Y,m));let miss=0;due.forEach(m=>{const has=(c.payments||[]).some(p=>pYear(p)===String(Y)&&parseInt(pSlot(p),10)===m);if(!has)miss++;});return miss;}
 
