@@ -285,7 +285,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-08 14:01';
+const BUILD_TIME='2026-06-08 15:32';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -449,6 +449,7 @@ function renderCellManage(){var c=S.clients[CELL_CI];if(!c){closeCellModal();ret
       if(p.verified)h+='<div style="color:var(--ok);font-size:12px;margin-bottom:6px">✓ 확인됨'+(p.verifiedBy?(' · '+p.verifiedBy):'')+(p.verifiedAt?(' · '+p.verifiedAt):'')+'</div>';
       else if(mism)h+='<div style="color:var(--bad);font-size:12px;margin-bottom:6px">● 미확인 — 분류하거나 「금액 맞음 확인」을 눌러주세요</div>';
       h+='<div class="row" style="gap:6px;margin-bottom:6px"><span class="muted">분류 →</span><button class="sm sec cellClf" data-i="'+idx+'" data-to="월정">월정</button><button class="sm sec cellClf" data-i="'+idx+'" data-to="확정신고">확정신고</button><button class="sm sec cellClf" data-i="'+idx+'" data-to="기타">기타</button></div>';
+      h+='<div class="row" style="gap:6px;margin-bottom:6px;background:#FAEEDA;border:1px solid #f0d9a8;border-radius:6px;padding:6px 8px"><span class="muted" style="color:var(--warn)">다른 달 →</span><select class="cellMoveTo" data-i="'+idx+'" style="width:auto;min-width:90px">'+slotOptions(p.slot)+'</select><button class="sm cellMove" data-i="'+idx+'" style="background:var(--warn)">이동</button></div>';
       h+='<div class="row" style="gap:6px"><button class="sm cellOk" data-i="'+idx+'">✓ 금액 맞음 확인</button><button class="sm sec cellSplit" data-i="'+idx+'">나누기</button><div style="flex:1"></div><button class="x sm cellDel" data-i="'+idx+'">삭제 🔒</button></div>';
     }
     h+='</div>';});
@@ -456,9 +457,11 @@ function renderCellManage(){var c=S.clients[CELL_CI];if(!c){closeCellModal();ret
   document.querySelectorAll('#cellBody .cellClf').forEach(function(b){b.onclick=function(){reclassPay(+b.dataset.i,b.dataset.to);};});
   document.querySelectorAll('#cellBody .cellOk').forEach(function(b){b.onclick=function(){verifyPay(+b.dataset.i);};});
   document.querySelectorAll('#cellBody .cellSplit').forEach(function(b){b.onclick=function(){openSplit(+b.dataset.i);};});
+  document.querySelectorAll('#cellBody .cellMove').forEach(function(b){b.onclick=function(){var sel=document.querySelector('#cellBody .cellMoveTo[data-i="'+b.dataset.i+'"]');movePay(+b.dataset.i,sel?sel.value:'');};});
   document.querySelectorAll('#cellBody .cellDel').forEach(function(b){b.onclick=function(){delPayAdmin(+b.dataset.i);};});}
 function reclassPay(idx,to){var c=S.clients[CELL_CI];var p=c.payments[idx];if(!p||p.issued)return;if(to==='월정'){var mm=p.date?String(parseInt(String(p.date).slice(5,7),10)||''):'';if(!mm){alert('입금일이 없어 월정 월을 정할 수 없습니다.');return;}p.slot=mm;p.etcReason='';}else if(to==='기타'){var r=prompt('기타 사유 — 이 돈이 왜 들어왔는지 적어주세요',p.etcReason||'');if(r===null)return;p.slot='기타';p.etcReason=String(r).trim();}else{p.slot=to;p.etcReason='';}p.verified=true;p.verifiedBy=me();p.verifiedAt=nowStr();Store.save();renderCellManage();renderHome();pushClient(c);}
 function verifyPay(idx){var c=S.clients[CELL_CI];var p=c.payments[idx];if(!p||p.issued)return;p.verified=true;p.verifiedBy=me();p.verifiedAt=nowStr();Store.save();renderCellManage();renderHome();pushClient(c);}
+function movePay(idx,to){var c=S.clients[CELL_CI];var p=c.payments[idx];if(!p||p.issued)return;if(!to){alert('이동할 달을 선택하세요.');return;}if(String(p.slot)===String(to)){alert('이미 '+(/^\d+$/.test(to)?to+'월':to)+' 칸입니다.');return;}if(to==='기타'){var r=prompt('기타 사유 — 이 돈이 왜 들어왔는지 적어주세요',p.etcReason||'');if(r===null)return;p.etcReason=String(r).trim();}else{p.etcReason='';}p.slot=to;p.verified=true;p.verifiedBy=me();p.verifiedAt=nowStr();Store.save();renderCellManage();renderHome();pushClient(c);}
 function delPayAdmin(idx){if(!requireAdmin())return;var c=S.clients[CELL_CI];var p=c.payments[idx];if(!p||p.issued)return;if(!confirm((p.date||'')+' · '+F(p.amount)+'원 입금을 삭제할까요?'))return;c.appliedPays=(c.appliedPays||[]).filter(function(k){return k!==(p.date+'|'+p.amount);});c.payments.splice(idx,1);Store.save();renderCellManage();renderHome();pushClient(c);}
 var SPLIT_IDX=-1,SPLIT_ROWS=[];
 function slotOptions(sel){var o='';for(var m=1;m<=12;m++)o+='<option value="'+m+'"'+(String(sel)===String(m)?' selected':'')+'>'+m+'월</option>';o+='<option value="확정신고"'+(sel==='확정신고'?' selected':'')+'>확정신고</option>';o+='<option value="기타"'+(sel==='기타'?' selected':'')+'>기타</option>';return o;}
