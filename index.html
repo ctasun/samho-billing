@@ -163,14 +163,13 @@
 
   <!-- 설정 -->
   <div id="set" class="tabpane hidden">
-    <details class="card">
-      <summary style="cursor:pointer;font-weight:700;color:var(--brand)">발행 양식 등록 <span class="muted" id="tplStatus"></span></summary>
-      <p class="muted" style="margin:8px 0">프로그램 업로드용 세금계산서 파일을 한 번 올리면 그 열 순서대로 출력하도록 매핑합니다.</p>
-      <div class="drop" id="dropTpl">발행 양식 파일 선택 (.xls/.xlsx)</div>
-      <input type="file" id="fileTpl" accept=".xls,.xlsx" class="hidden">
-      <div class="fgrid" id="tplMap" style="margin-top:10px"></div>
-      <div class="row" id="tplBtns" style="margin-top:10px;display:none"><button class="sm" id="saveTpl">이 형식으로 저장</button><button class="sec sm" id="clearTpl">양식 삭제</button></div>
-    </details>
+    <div class="card">
+      <b style="color:var(--brand)">세금계산서 빈서식 등록 <span class="muted" id="tplStatus"></span></b>
+      <p class="muted" style="margin:6px 0">홈택스 전자세금계산서 일괄발행 빈서식(엑셀예시양식)을 한 번 등록하면, 머리글·공급자 정보를 그대로 보존한 채 5행부터 공급받는자·금액·품목만 채워 산출합니다. PC별 1회 등록.</p>
+      <div class="drop" id="dropTaxTpl">세금계산서 빈서식 파일 선택 (.xlsx/.xls)</div>
+      <input type="file" id="fileTaxTpl" accept=".xlsx,.xls" class="hidden">
+      <div class="row" id="taxTplBtns" style="margin-top:10px;display:none"><button class="sec sm" id="clearTaxTpl">빈서식 삭제</button></div>
+    </div>
     <div class="card">
       <b style="color:var(--brand)">현금영수증 빈서식 등록 <span class="muted" id="cashTplStatus"></span></b>
       <p class="muted" style="margin:6px 0">홈택스 현금영수증 일괄발급 빈서식(엑셀업로드양식 6열)을 한 번 등록하면, 발행 시 6개 시트를 그대로 보존한 채 7행부터 데이터만 채워 산출합니다. PC별 1회 등록.</p>
@@ -285,7 +284,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-08 20:30';;
+const BUILD_TIME='2026-06-08 21:07';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -379,7 +378,7 @@ function renderHome(){
   fillSel('gYear',yearsList(),function(y){return y+'년';});
   var _gy=document.getElementById('gYear');var _cy=String(new Date().getFullYear());if(!_gy.dataset.userpick&&[..._gy.options].some(o=>o.value===_cy))_gy.value=_cy;
   if(!document.getElementById('gIssueDate').value)document.getElementById('gIssueDate').value=new Date().toISOString().slice(0,10);
-  document.getElementById('tplWarn').textContent=(typeof TPL!=='undefined'&&TPL)?'발행 양식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 발행 양식 미등록 — 기본 형식으로 출력됩니다. ④설정에서 등록하세요.';
+  document.getElementById('tplWarn').textContent=localStorage.getItem('samho_tax_blank_b64')?'세금계산서 빈서식 등록됨. 월 칸/열을 선택하고 [세금계산서 발행]을 누르세요. 발행분은 ✓로 표시됩니다.':'⚠ 세금계산서 빈서식 미등록 — ④설정에서 빈서식을 먼저 등록하세요.';
   const Y=curYear(),q=(document.getElementById('hSearch').value||'').toLowerCase(),mf=document.getElementById('hMgr').value;
   const baseList=S.clients.filter(c=>(!q||((c.name||'')+(c.manager||'')).toLowerCase().includes(q))&&(!mf||c.manager===mf)&&(!GBF||(GBF==='신대'?c.gubun==='신대':c.gubun!=='신대'))&&(!MISU||(MISU==='3'?misuMonths(c,Y)>=3:misuMonths(c,Y)===parseInt(MISU,10)))&&(!UNVER||hasUnver(c,Y)));
   let list=applyColSort(applyColFilters(baseList,Y),Y);
@@ -533,14 +532,33 @@ let TPL=null;try{TPL=JSON.parse(localStorage.getItem('samho_tpl')||'null');}catc
 const DEFAULT_TPL={headers:['작성일자','공급받는자 등록번호','상호','대표자','업태','종목','품목','공급가액','세액','합계금액','담당자','입금일','비고'],map:['date','regno','name','ceo','bizType','bizItem','item','supply','tax','total','manager','paydate','note']};
 function resolveF(f,x){switch(f){case 'date':return x.issueDate;case 'date8':return x.issueDate?String(x.issueDate).replace(/-/g,''):'';case 'regno':return x.c.bizno||x.ssnPlain||'';case 'bizno':return x.c.bizno||'';case 'ssn':return x.ssnPlain||'';case 'name':return x.c.name||'';case 'ceo':return x.c.ceo||'';case 'bizType':return x.c.bizType||'';case 'bizItem':return x.c.bizItem||'';case 'email':return x.c.email||'';case 'addr':return x.c.addr||'';case 'tel':return x.c.tel||'';case 'item':return '기장수수료';case 'supply':return x.supply;case 'tax':return x.tax;case 'total':return x.supply+x.tax;case 'paydate':return x.p.date||'';case 'payamount':return num(x.p.amount);case 'manager':return x.c.manager||'';case 'note':return x.c.note||'';default:return '';}}
 document.getElementById('issueBtn').onclick=async()=>{const sel=selectedPays();if(!sel.length){alert('월 칸 또는 열을 선택하세요.');return;}
+  const b64t=localStorage.getItem('samho_tax_blank_b64');if(!b64t){alert('④설정에서 세금계산서 빈서식을 먼저 등록하세요.');return;}
   if(sel.some(r=>!r.c.bizno&&r.c.ssn)&&!CRYPTOKEY){alert('비사업자 발행분의 주민번호 복호화를 위해 ④설정에서 공용 암호키를 입력하세요.');return;}
+  if(sel.some(r=>!r.c.bizno&&!r.c.ssn)){alert('사업자번호·주민번호가 모두 없는 거래처가 있어 발행할 수 없습니다. 거래처 정보를 확인하세요.');return;}
   const issueDate=document.getElementById('gIssueDate').value;if(!issueDate){alert('작성일자를 입력하세요.');return;}
-  if(!confirm(sel.length+'건을 '+issueDate+' 작성일자로 발행할까요?'))return;
-  const tpl=TPL||DEFAULT_TPL;const cols=tpl.cols||(tpl.headers?tpl.headers.length:tpl.map.length);const aoa=tpl.top?tpl.top.map(r=>r.slice()):[tpl.headers.slice()];const changed=[];
-  for(const r of sel){const ssnPlain=await decSsn(r.c.ssn);const x={c:r.c,p:r.p,supply:supplyOf(r.c,r.p),tax:taxOf(r.c,r.p),issueDate,ssnPlain};const row=new Array(cols).fill('');tpl.map.forEach((f,ci)=>{if(f)row[ci]=resolveF(f,x);});aoa.push(row);r.p.issued=true;r.p.issueType='tax';r.p.issueDate=issueDate;r.p.supply=x.supply;r.p.tax=x.tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'세금계산서');XLSX.writeFile(wb,'세무법인삼호 남부지점 세금계산서 발행_'+issueDate.replace(/-/g,'')+'.xls');
+  const noMail=sel.filter(r=>!String(r.c.email||'').trim()).length;
+  if(!confirm(sel.length+'건을 '+issueDate+' 작성일자로 발행할까요?'+(noMail?'\n\n⚠ 이메일 없는 거래처 '+noMail+'건은 홈택스 업로드 시 오류가 납니다.':'')))return;
+  let wb;try{wb=XLSX.read(ub64(b64t),{type:'array'});}catch(e){alert('빈서식 읽기 실패: '+e.message);return;}
+  const ws=wb.Sheets['엑셀예시양식'];if(!ws){alert('빈서식에 "엑셀예시양식" 시트가 없습니다.');return;}
+  const cv=(rr,cc)=>{const a=ws[XLSX.utils.encode_cell({r:rr,c:cc})];return a==null?'':a.v;};
+  const SUP=[1,2,3,5,9,10,11,12,13,14,15,16,17,18,19,20,21];const seed={};SUP.forEach(ci=>seed[ci]=cv(4,ci));
+  const changed=[];const rows=[];
+  for(const r of sel){const ssnPlain=await decSsn(r.c.ssn);const supply=supplyOf(r.c,r.p),tax=taxOf(r.c,r.p);
+    const isBiz=!!r.c.bizno;const regno=(isBiz?String(r.c.bizno):String(ssnPlain)).replace(/[^0-9]/g,'');
+    const slot=pSlot(r.p);const item=slot==='확정신고'?'조정료':(slot==='기타'?'':'기장수수료');const d8=String(issueDate).replace(/-/g,'');
+    const row=new Array(71).fill('');SUP.forEach(ci=>row[ci]=seed[ci]);
+    row[4]=isBiz?'1':'2';
+    row[22]=regno;row[23]=isBiz?(r.c.name||''):(r.c.ceo||'');row[24]=r.c.ceo||'';row[25]=r.c.addr||'';row[28]=r.c.bizType||'';row[29]=r.c.bizItem||'';row[31]=r.c.email||'';row[34]=r.c.tel||'';
+    row[35]=d8;row[36]=supply;row[37]=tax;
+    row[38]=d8;row[39]=item;row[43]=supply;row[44]=tax;
+    row[70]=supply+tax;
+    rows.push(row);
+    r.p.issued=true;r.p.issueType='tax';r.p.issueDate=issueDate;r.p.supply=supply;r.p.tax=tax;r.p._sel=false;if(!changed.includes(r.c))changed.push(r.c);}
+  XLSX.utils.sheet_add_aoa(ws,rows,{origin:'A5'});
+  for(let rr=5+rows.length;rr<=45;rr++){for(let cc=0;cc<71;cc++){const ref=XLSX.utils.encode_cell({r:rr-1,c:cc});if(ws[ref])delete ws[ref];}}
+  XLSX.writeFile(wb,'세무법인삼호 남부지점 세금계산서 발행_'+issueDate.replace(/-/g,'')+'.xlsx');
   Store.save();renderHome();if(CONNECTED()){for(const c of changed)await pushClient(c);chip('☁ 발행상태 동기화');}};
-
+  
 /* 거래처 추가/명단/내보내기 */
 document.getElementById('newClient').onclick=()=>{if(!requireWrite())return;openClient(-1);};
 const IMPG={name:['상호'],ceo:['대표자'],bizno:['사업자','법인등록'],ssn:['주민'],tel:['연락'],openDate:['개업'],contractDate:['계약'],email:['이메일','메일'],bizType:['업태'],bizItem:['종목'],feeNet:['제외'],feeGross:['보수'],finalTaxFee:['확정신고예정','확정신고'],etcFee:['기타예정'],addr:['사업장'],calAddr:['달력'],wht:['원천'],note:['비고'],manager:['담당']};
@@ -637,11 +655,11 @@ function pickHeader(aoa){var kw=['작성','사업자','등록번호','공급가'
 function readAoa(file,cb){var fr=new FileReader();fr.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];cb(XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));}catch(err){alert('읽기 실패: '+err.message);}};fr.readAsArrayBuffer(file);}
 function guessField(h){h=String(h).replace(/\s/g,'');if(/주민/.test(h))return 'ssn';if(/작성|발행일/.test(h)&&!/입금/.test(h))return 'date8';if(/등록번호|사업자|공급받는자번호/.test(h))return 'regno';if(/상호|거래처|업체/.test(h))return 'name';if(/대표|성명/.test(h))return 'ceo';if(/업태/.test(h))return 'bizType';if(/종목/.test(h))return 'bizItem';if(/이메일|메일/.test(h))return 'email';if(/주소/.test(h))return 'addr';if(/품목|품명|내역|적요/.test(h))return 'item';if(/공급가/.test(h))return 'supply';if(/세액|부가세/.test(h))return 'tax';if(/합계|공급대가|총액/.test(h))return 'total';if(/입금일/.test(h))return 'paydate';if(/입금액/.test(h))return 'payamount';if(/담당/.test(h))return 'manager';if(/비고/.test(h))return 'note';return '';}
 function renderTplMap(aoa,saved){tplAoa=aoa;tplHeaderRow=(saved&&saved.headerRow!=null)?saved.headerRow:pickHeader(aoa);var cols=Math.max.apply(null,aoa.map(function(r){return (r||[]).length;}));var header=aoa[tplHeaderRow]||[];var map=(saved&&saved.map)||[];var h='<div style="grid-column:1/-1" class="muted">라벨 행: '+(tplHeaderRow+1)+'행 자동감지 · 채울 열만 항목을 지정하고 나머지는 (빈칸)으로 두세요. 작성일자 열에는 "작성일자(YYYYMMDD)"를 고르세요.</div>';for(var i=0;i<cols;i++){var cur=map[i]!=null?map[i]:guessField(header[i]||'');h+='<div><label class="fld">'+colL(i)+' · '+(((header[i]||'')+'').slice(0,16))+'</label><select data-i="'+i+'">'+TFIELDS.map(function(f){return '<option value="'+f[0]+'" '+(f[0]===cur?'selected':'')+'>'+f[1]+'</option>';}).join('')+'</select></div>';}document.getElementById('tplMap').innerHTML=h;document.getElementById('tplBtns').style.display='flex';}
-function tplStatus(){document.getElementById('tplStatus').textContent=TPL?('· 등록됨('+(TPL.cols||(TPL.headers?TPL.headers.length:0))+'열)'):'· 미등록(기본형식)';}
-bindDrop('dropTpl','fileTpl',function(f){readAoa(f,function(aoa){document.getElementById('dropTpl').classList.add('has');renderTplMap(aoa,null);});});
-document.getElementById('saveTpl').onclick=function(){if(!tplAoa)return;var map=[];document.querySelectorAll('#tplMap select').forEach(function(s){map[+s.dataset.i]=s.value;});var cols=Math.max.apply(null,tplAoa.map(function(r){return (r||[]).length;}));TPL={top:tplAoa.slice(0,tplHeaderRow+1),cols:cols,map:map,headerRow:tplHeaderRow};localStorage.setItem('samho_tpl',JSON.stringify(TPL));tplStatus();alert('발행 양식 저장됨 (머리글 '+(tplHeaderRow+1)+'행 보존, '+cols+'열)');};
-document.getElementById('clearTpl').onclick=function(){TPL=null;localStorage.removeItem('samho_tpl');document.getElementById('tplMap').innerHTML='';document.getElementById('tplBtns').style.display='none';tplStatus();};
-
+function tplStatus(){var has=!!localStorage.getItem('samho_tax_blank_b64');document.getElementById('tplStatus').textContent=has?'· 등록됨':'· 미등록';var b=document.getElementById('taxTplBtns');if(b)b.style.display=has?'flex':'none';}
+bindDrop('dropTaxTpl','fileTaxTpl',function(f){readB64(f,function(b64){var ok=false;try{var wb=XLSX.read(Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);}),{type:'array'});ok=!!wb.Sheets['엑셀예시양식'];}catch(e){alert('엑셀 빈서식이 아닙니다: '+e.message);return;}if(!ok){alert('빈서식에 "엑셀예시양식" 시트가 없습니다. 올바른 홈택스 세금계산서 빈서식을 등록하세요.');return;}localStorage.setItem('samho_tax_blank_b64',b64);document.getElementById('dropTaxTpl').classList.add('has');tplStatus();alert('세금계산서 빈서식이 등록되었습니다.');});});
+document.getElementById('clearTaxTpl').onclick=function(){if(!confirm('등록된 세금계산서 빈서식을 삭제할까요?'))return;localStorage.removeItem('samho_tax_blank_b64');document.getElementById('dropTaxTpl').classList.remove('has');tplStatus();};
+tplStatus();
+  
 /* 현금영수증 빈서식 등록 */
 function cashTplStatus(){var has=!!localStorage.getItem('samho_cash_blank_b64');document.getElementById('cashTplStatus').textContent=has?'· 등록됨':'· 미등록';document.getElementById('cashTplBtns').style.display=has?'flex':'none';}
 function readB64(file,cb){var fr=new FileReader();fr.onload=function(e){cb(String(e.target.result).split(',')[1]);};fr.readAsDataURL(file);}
