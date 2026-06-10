@@ -148,6 +148,28 @@
       </div>
       <div id="unmatchBox" style="margin-top:10px"></div>
     </div>
+    <div class="card" id="issImportCard">
+      <b style="color:var(--brand)">📥 발행파일 일괄 가져오기 <span class="muted">🔒 관리자 전용</span></b>
+      <p class="muted" style="margin:6px 0">홈택스 발행에 쓰던 세금계산서·현금영수증 발행파일을 그대로 올리면 발행분(✓)으로 자동 정리됩니다. 미등록 거래처는 자동 추가하지 않고 아래 결과 목록에만 표시됩니다.</p>
+      <div class="fgrid">
+        <div>
+          <label class="fld">🧾 세금계산서 발행파일 (엑셀예시양식)</label>
+          <div class="drop" id="dropIssTax">세금계산서 발행파일 선택<div class="muted" id="infoIssTax"></div></div>
+          <input type="file" id="fileIssTax" accept=".xls,.xlsx" class="hidden">
+        </div>
+        <div>
+          <label class="fld">🧾 현금영수증 발행파일 (엑셀업로드양식)</label>
+          <div class="drop" id="dropIssCash">현금영수증 발행파일 선택<div class="muted" id="infoIssCash"></div></div>
+          <input type="file" id="fileIssCash" accept=".xls,.xlsx" class="hidden">
+          <div class="muted" id="issCashMeta" style="margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="sm" id="runIssImport">가져오기 실행</button>
+        <span class="muted">발행분은 그리드에서 ✓로 잠겨 표시됩니다.</span>
+      </div>
+      <div id="issImportResult" style="margin-top:10px"></div>
+    </div>
   </div>
 
   <!-- 실적 -->
@@ -284,7 +306,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const BUILD_TIME='2026-06-09 17:05';
+const BUILD_TIME='2026-06-10 12:56';
 const KEY='samho_tool_v6'; let mem=null;
 document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('buildTime');if(b)b.textContent=BUILD_TIME;});
 const Store={get(){if(mem)return mem;try{const r=localStorage.getItem(KEY);mem=r?JSON.parse(r):def();}catch(e){mem=def();}return mem;},save(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}};
@@ -628,6 +650,61 @@ document.getElementById('mDelete').onclick=()=>{if(!requireDelete())return;const
 
 /* 입금 업로드 (거래처 선등록 강제) */
 let rawBank=null,rawDeo=null;
+let rawIssTax=null,rawIssCash=null,issCashDate='';
+bindDrop('dropIssTax','fileIssTax',function(f){var fr=new FileReader();fr.onload=function(ev){try{rawIssTax=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});document.getElementById('dropIssTax').classList.add('has');document.getElementById('infoIssTax').textContent=f.name;}catch(err){alert('세금계산서 파일 읽기 실패: '+err.message);}};fr.readAsArrayBuffer(f);});
+bindDrop('dropIssCash','fileIssCash',function(f){var fr=new FileReader();fr.onload=function(ev){try{rawIssCash=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});var m=String(f.name).match(/(\d{8})/);issCashDate=m?(m[1].slice(0,4)+'-'+m[1].slice(4,6)+'-'+m[1].slice(6,8)):'';document.getElementById('dropIssCash').classList.add('has');document.getElementById('infoIssCash').textContent=f.name;document.getElementById('issCashMeta').innerHTML='작성일자(파일명 자동): <b>'+(issCashDate||'❌ 파일명에 8자리 날짜 없음')+'</b> · 공용 암호키: '+(CRYPTOKEY?'<b style="color:var(--ok)">입력됨</b>':'<b style="color:var(--bad)">없음(현금영수증 건너뜀)</b>');}catch(err){alert('현금영수증 파일 읽기 실패: '+err.message);}};fr.readAsArrayBuffer(f);});
+function issToSlot(item,issueDate){var t=String(item||'').replace(/\s/g,'');if(/신고|조정|확정/.test(t))return '확정신고';if(/월정|기장/.test(t)){var mm=issueDate?parseInt(issueDate.slice(5,7),10):0;return mm?String(mm):'기타';}return '기타';}
+function renderIssResult(R,todo){var box=document.getElementById('issImportResult');var miss=(R.tax.total-R.tax.ok-R.tax.dup-R.tax.none)+(R.cash.total-R.cash.ok-R.cash.dup-R.cash.fail-R.cash.nokey);var h='<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">';h+='<div style="background:#eef6ef;color:var(--ok);padding:8px 12px;font-weight:700">✅ 발행파일 가져오기 완료</div>';h+='<div style="padding:10px 12px;font-size:12px;line-height:1.9;font-family:monospace">';h+='세금계산서&nbsp;&nbsp;반영 <b>'+R.tax.ok+'</b> · 중복제외 '+R.tax.dup+' · 미등록 '+R.tax.none+'<br>';h+='현금영수증&nbsp;&nbsp;반영 <b>'+R.cash.ok+'</b> · 중복제외 '+R.cash.dup+' · 매칭실패 '+R.cash.fail+' · 암호키없음 '+R.cash.nokey+'<br>';h+='기타분류(확인요망) <b style="color:var(--warn)">'+R.etc+'</b>';if(miss>0)h+='<br><span style="color:var(--bad)">⚠ 처리 누락 의심 '+miss+'건 — 파일을 확인하세요</span>';h+='</div>';if(todo.length){h+='<div style="border-top:1px dashed var(--line);padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--warn);margin-bottom:5px">⚠ 손봐야 할 항목 ('+todo.length+'건, 복사 가능)</div>';h+='<textarea readonly rows="'+Math.min(12,todo.length+1)+'" style="font-size:11.5px;background:#fff8f0;border:1px solid #f0dcc4;width:100%">'+todo.join('\n').replace(/</g,'&lt;')+'</textarea></div>';}h+='</div>';box.innerHTML=h;}
+document.getElementById('runIssImport').onclick=function(){runIssImport();};
+async function runIssImport(){
+  if(!requireAdmin())return;
+  if(!rawIssTax&&!rawIssCash){alert('발행파일을 먼저 선택하세요.');return;}
+  if(!S.clients.length){alert('먼저 ①에서 거래처를 등록하세요.');return;}
+  var changed=[],hist=[],todo=[];
+  var R={tax:{ok:0,dup:0,none:0,total:0},cash:{ok:0,dup:0,fail:0,nokey:0,total:0},etc:0};
+  if(rawIssTax){var ws=rawIssTax.Sheets['엑셀예시양식'];
+    if(!ws){alert('세금계산서 파일에 "엑셀예시양식" 시트가 없습니다.');}
+    else{var aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      for(var i=4;i<aoa.length;i++){var r=aoa[i];if(!r)continue;
+        var nm=String(r[23]||'').trim(),rg=String(r[22]||'').replace(/[^0-9]/g,'');
+        if(!nm&&!rg)continue;
+        var supply=num(r[36]),tax=num(r[37]),total=num(r[70])||(supply+tax);if(!total)continue;
+        R.tax.total++;
+        var d8=String(r[35]||'').replace(/[^0-9]/g,'').slice(0,8);
+        var iss=d8.length===8?(d8.slice(0,4)+'-'+d8.slice(4,6)+'-'+d8.slice(6,8)):'';
+        var item=String(r[39]||'').trim();
+        var c=rg?S.clients.find(function(x){return String(x.bizno||'').replace(/\D/g,'')===rg;}):null;
+        if(!c)c=findClient(nm);
+        if(!c){R.tax.none++;todo.push('[미등록·세금] '+(nm||rg));continue;}
+        var key=(iss||'')+'|'+Math.round(total)+'|tax';c.appliedPays=c.appliedPays||[];
+        if(c.appliedPays.indexOf(key)>=0){R.tax.dup++;continue;}c.appliedPays.push(key);
+        var slot=issToSlot(item,iss),er='';if(slot==='기타'){er='발행가져오기: '+(item||'(빈칸)');R.etc++;todo.push('[기타분류·세금] '+c.name+' · 원품목 "'+(item||'(빈칸)')+'" → 기타 칸');}
+        c.payments=c.payments||[];c.payments.push({date:iss,amount:Math.round(total),month:(iss||'').slice(0,7),slot:slot,year:iss?iss.slice(0,4):curYear(),issued:true,issueType:'tax',issueDate:iss,supply:supply,tax:tax,source:'manual',verified:true,verifiedBy:me(),verifiedAt:nowStr(),etcReason:er});
+        if(iss&&(!c.lastPayDate||iss>=c.lastPayDate)){c.lastPayDate=iss;c.lastPayAmount=Math.round(total);}
+        hist.push({month:(iss||'').slice(0,7),date:iss,company:c.name,manager:c.manager||'',billed:0,collected:Math.round(total)});
+        if(changed.indexOf(c)<0)changed.push(c);R.tax.ok++;}}}
+  if(rawIssCash){var ws2=rawIssCash.Sheets['엑셀업로드양식'];
+    if(!ws2){alert('현금영수증 파일에 "엑셀업로드양식" 시트가 없습니다.');}
+    else if(!issCashDate){alert('현금영수증 작성일자를 파일명에서 찾지 못했습니다(YYYYMMDD 8자리 필요).');}
+    else{var aoa2=XLSX.utils.sheet_to_json(ws2,{header:1,defval:''});
+      for(var j=6;j<aoa2.length;j++){var r2=aoa2[j];if(!r2)continue;
+        var idno=String(r2[1]||'').replace(/[^0-9]/g,'');var total2=num(r2[2]),supply2=num(r2[3]),tax2=num(r2[4]);
+        if(!idno||!total2)continue;R.cash.total++;var memo=String(r2[5]||'').trim();
+        var c2=null;
+        if(idno.length===10){c2=S.clients.find(function(x){return String(x.bizno||'').replace(/\D/g,'')===idno;});}
+        else if(idno.length===13){if(!CRYPTOKEY){R.cash.nokey++;continue;}for(var k=0;k<S.clients.length;k++){var sx=S.clients[k];if(!sx.ssn)continue;var dec=String(await decSsn(sx.ssn)).replace(/[^0-9]/g,'');if(dec===idno){c2=sx;break;}}}
+        if(!c2){R.cash.fail++;todo.push('[매칭실패·현금] 발급번호 '+idno.slice(0,3)+'***('+idno.length+'자리) · '+F(total2)+'원');continue;}
+        var key2=issCashDate+'|'+Math.round(total2)+'|cash';c2.appliedPays=c2.appliedPays||[];
+        if(c2.appliedPays.indexOf(key2)>=0){R.cash.dup++;continue;}c2.appliedPays.push(key2);
+        var slot2=issToSlot(memo,issCashDate),er2='';if(slot2==='기타'){er2='발행가져오기: '+(memo||'(빈칸)');R.etc++;todo.push('[기타분류·현금] '+c2.name+' · 메모 "'+(memo||'(빈칸)')+'" → 기타 칸');}
+        c2.payments=c2.payments||[];c2.payments.push({date:issCashDate,amount:Math.round(total2),month:issCashDate.slice(0,7),slot:slot2,year:issCashDate.slice(0,4),issued:true,issueType:'cash',issueDate:issCashDate,supply:supply2,tax:tax2,source:'manual',verified:true,verifiedBy:me(),verifiedAt:nowStr(),etcReason:er2});
+        if(!c2.lastPayDate||issCashDate>=c2.lastPayDate){c2.lastPayDate=issCashDate;c2.lastPayAmount=Math.round(total2);}
+        hist.push({month:issCashDate.slice(0,7),date:issCashDate,company:c2.name,manager:c2.manager||'',billed:0,collected:Math.round(total2)});
+        if(changed.indexOf(c2)<0)changed.push(c2);R.cash.ok++;}}}
+  if(hist.length)S.history.push.apply(S.history,hist);
+  Store.save();renderHome();renderIssResult(R,todo);
+  if(CONNECTED()){var ci=0;for(const c of changed){await pushClient(c);ci++;chip('☁ 동기화 '+ci+'/'+changed.length);}if(hist.length)await pushHistory(hist);chip('☁ 동기화 완료');}
+}
 bindDrop('dropBank','fileBank',f=>readXlsx(f,d=>{rawBank=d;document.getElementById('dropBank').classList.add('has');document.getElementById('infoBank').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('bankSel').classList.remove('hidden');colSel('mPayer',d.headers,['거래기록','입금자','보낸','내용','적요','상대']);colSel('mAmount',d.headers,['입금금액','입금','금액']);colSel('mDate',d.headers,['거래일자','일자','날짜','거래일']);applyBankMap(d.headers);['mPayer','mAmount','mDate'].forEach(id=>document.getElementById(id).onchange=saveBankMap);}));
 bindDrop('dropDeobil','fileDeobil',f=>readXlsx(f,d=>{rawDeo=d;document.getElementById('dropDeobil').classList.add('has');document.getElementById('infoDeobil').textContent=d.name+' · '+d.rows.length+'행';document.getElementById('deoSel').classList.remove('hidden');colSel('dName',d.headers,['회원명','거래처','상호','업체','회사']);colSel('dAmount',d.headers,['납부','금액','청구','보수','수수료']);colSel('dDate',d.headers,['출금일','입금일','일자','날짜']);colSel('dStatus',d.headers,['상태']);}));
 document.getElementById('applyBank').onclick=async()=>{await runBankApply();};
